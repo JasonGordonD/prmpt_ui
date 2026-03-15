@@ -59,40 +59,39 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-[400px] space-y-8">
         <div className="text-center space-y-3">
-          <h1 className="text-4xl font-bold tracking-tight">
-            <span className="text-white">PRMPT</span>
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight text-[#ededed]">PRMPT</h1>
           <p className="text-[#888] text-sm">Voice AI Agent Platform</p>
         </div>
 
         <div className="space-y-4">
+          {/* Agent dropdown */}
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-left hover:border-[#555] transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1a1a] border border-[#333] rounded-xl text-left btn-interactive"
             >
-              <span className={selectedAgent ? 'text-white' : 'text-[#666]'}>
+              <span className={selectedAgent ? 'text-[#ededed]' : 'text-[#666]'}>
                 {selectedAgent ? selectedAgent.displayName : 'Select an agent...'}
               </span>
-              <ChevronDown className={`w-4 h-4 text-[#666] transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-[#666] transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {dropdownOpen && (
-              <div className="absolute z-10 w-full mt-1 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden shadow-xl">
+              <div className="absolute z-10 w-full mt-1 bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden shadow-xl animate-fade-in">
                 {AGENTS.map((agent) => (
                   <button
                     key={agent.id}
                     onClick={() => handleSelect(agent)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#252525] transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#252525] transition-colors text-left btn-interactive"
                   >
                     <div
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className="w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: agent.theme.primary }}
                     />
                     <div>
-                      <div className="text-sm font-medium text-white">{agent.displayName}</div>
+                      <div className="text-sm font-medium text-[#ededed]">{agent.displayName}</div>
                       <div className="text-xs text-[#888]">{agent.description}</div>
                     </div>
                   </button>
@@ -101,10 +100,11 @@ export function LandingPage() {
             )}
           </div>
 
+          {/* Selected agent details + password form */}
           {selectedAgent && (
             <div className="animate-fade-in space-y-4">
               <div
-                className="px-4 py-3 rounded-lg border text-sm"
+                className="px-4 py-3 rounded-xl border text-sm"
                 style={{
                   backgroundColor: selectedAgent.theme.surface,
                   borderColor: selectedAgent.theme.border,
@@ -120,7 +120,7 @@ export function LandingPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter password"
-                  className="w-full px-4 py-3 bg-[#1a1a1a] border border-[#333] rounded-lg text-white placeholder-[#555] outline-none focus:border-[#555] transition-colors"
+                  className="w-full px-4 py-3 bg-[#1a1a1a] border border-[#333] rounded-xl text-[#ededed] placeholder-[#555] transition-colors"
                   autoFocus
                 />
 
@@ -131,10 +131,17 @@ export function LandingPage() {
                 <button
                   type="submit"
                   disabled={loading || !password}
-                  className="w-full py-3 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-lg font-medium text-white btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   style={{ backgroundColor: selectedAgent.theme.primary }}
                 >
-                  {loading ? 'Validating...' : 'Enter'}
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin-slow" />
+                      Validating...
+                    </>
+                  ) : (
+                    'Enter'
+                  )}
                 </button>
               </form>
             </div>
