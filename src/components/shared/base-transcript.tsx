@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Copy, Download, Check } from 'lucide-react';
 import type { ReceivedMessage } from '@livekit/components-core';
 import type { AgentState } from '@livekit/components-react';
