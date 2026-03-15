@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Track } from 'livekit-client';
 import {
   useTrackToggle,
@@ -95,12 +95,30 @@ function FileUploadButton() {
   );
 }
 
+/* ─── Chat Message Timestamp ─── */
+
+function formatChatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 /* ─── Main Control Bar ─── */
 
 export function ControlBar({ onLeave, className = '' }: ControlBarProps) {
-  const { send, isSending } = useChat();
+  const { send, isSending, chatMessages } = useChat();
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll chat to bottom on new messages
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   // Mic toggle using real LiveKit track control
   const { toggle: toggleMic, enabled: micEnabled } = useTrackToggle({
@@ -119,31 +137,54 @@ export function ControlBar({ onLeave, className = '' }: ControlBarProps) {
 
   return (
     <div className={`shrink-0 ${className}`}>
-      {/* Chat input panel */}
+      {/* Chat panel — message list + input */}
       {chatOpen && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-[var(--surface)] border-t border-[var(--border)] animate-fade-in">
-          <input
-            type="text"
-            value={chatMessage}
-            onChange={(e) => setChatMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
-            placeholder="Type a message..."
-            className="flex-1 px-3 py-2 bg-[var(--bg)] text-[var(--text)] border border-[var(--border)] rounded-lg text-sm placeholder-[var(--text-muted)]"
-            autoFocus
-          />
-          <button
-            onClick={handleSendChat}
-            disabled={isSending || !chatMessage.trim()}
-            className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--primary)] text-white btn-interactive disabled:opacity-50"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setChatOpen(false)}
-            className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] btn-interactive"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="flex flex-col bg-[var(--surface)] border-t border-[var(--border)] animate-fade-in">
+          {/* Message list */}
+          {chatMessages.length > 0 && (
+            <div
+              ref={chatScrollRef}
+              className="max-h-[200px] overflow-y-auto px-4 py-3 space-y-2"
+            >
+              {chatMessages.map((msg) => (
+                <div key={msg.timestamp} className="flex items-start gap-2 text-sm">
+                  <span className="text-[11px] text-[var(--text-muted)] tabular-nums shrink-0 mt-0.5">
+                    {formatChatTime(msg.timestamp)}
+                  </span>
+                  <span className="text-xs font-medium text-[var(--primary)] shrink-0">
+                    {msg.from?.name || msg.from?.identity || 'You'}:
+                  </span>
+                  <span className="text-sm text-[var(--text)]">{msg.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Send input row */}
+          <div className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border)]">
+            <input
+              type="text"
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendChat()}
+              placeholder="Type a message..."
+              className="flex-1 px-3 py-2 bg-[var(--bg)] text-[var(--text)] border border-[var(--border)] rounded-lg text-sm placeholder-[var(--text-muted)]"
+              autoFocus
+            />
+            <button
+              onClick={handleSendChat}
+              disabled={isSending || !chatMessage.trim()}
+              className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--primary)] text-white btn-interactive disabled:opacity-50"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setChatOpen(false)}
+              className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--text)] btn-interactive"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -165,7 +206,7 @@ export function ControlBar({ onLeave, className = '' }: ControlBarProps) {
 
           <button
             onClick={() => setChatOpen(!chatOpen)}
-            className={`flex items-center justify-center w-11 h-11 rounded-lg btn-interactive border ${
+            className={`relative flex items-center justify-center w-11 h-11 rounded-lg btn-interactive border ${
               chatOpen
                 ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
                 : 'bg-[var(--surface)] text-[var(--text)] border-[var(--border)] hover:bg-[var(--border)]'
@@ -173,6 +214,10 @@ export function ControlBar({ onLeave, className = '' }: ControlBarProps) {
             title={chatOpen ? 'Close chat' : 'Open chat'}
           >
             <MessageSquare className="w-4 h-4" />
+            {/* Unread indicator when chat is closed and there are messages */}
+            {!chatOpen && chatMessages.length > 0 && (
+              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--primary)] border-2 border-[var(--surface)]" />
+            )}
           </button>
         </div>
 

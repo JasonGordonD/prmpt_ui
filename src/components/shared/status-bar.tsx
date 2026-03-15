@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useAgent } from '@livekit/components-react';
+import { useAgent, useConnectionQualityIndicator, useConnectionState, useEnsureRoom } from '@livekit/components-react';
+import { ConnectionQuality } from 'livekit-client';
 import type { AgentState } from '@livekit/components-react';
 import { useSessionTimer } from '@/hooks/use-session-timer';
 import type { AgentConfig } from '@/lib/agents';
@@ -39,6 +40,27 @@ function getStateDot(state: AgentState): StateDotInfo {
   }
 }
 
+type QualityInfo = {
+  color: string;
+  label: string;
+};
+
+function getQualityInfo(quality: ConnectionQuality): QualityInfo {
+  switch (quality) {
+    case ConnectionQuality.Excellent:
+      return { color: '#22c55e', label: 'Excellent' };
+    case ConnectionQuality.Good:
+      return { color: '#f59e0b', label: 'Good' };
+    case ConnectionQuality.Poor:
+      return { color: '#ef4444', label: 'Poor' };
+    case ConnectionQuality.Lost:
+      return { color: '#ef4444', label: 'Lost' };
+    case ConnectionQuality.Unknown:
+    default:
+      return { color: '#888', label: 'Unknown' };
+  }
+}
+
 function parseSentiment(raw: string | undefined): { emotion: string; confidence: number } | null {
   if (!raw) return null;
   try {
@@ -56,7 +78,12 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
   const agent = useAgent();
   const timer = useSessionTimer(agent.isConnected, agent.isFinished);
 
+  const room = useEnsureRoom();
+  const { quality } = useConnectionQualityIndicator({ participant: room.localParticipant });
+  const connectionState = useConnectionState();
+
   const stateDot = useMemo(() => getStateDot(agent.state), [agent.state]);
+  const qualityInfo = useMemo(() => getQualityInfo(quality), [quality]);
 
   // Read participant attributes (published by backend agent)
   const attributes = agent.attributes;
@@ -90,6 +117,24 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
           {stateDot.label}
         </span>
       </div>
+
+      {/* Connection quality indicator — always shown */}
+      <div className="flex items-center gap-1.5">
+        <div
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: qualityInfo.color }}
+        />
+        <span className="text-[11px] text-[var(--text-muted)]">
+          {qualityInfo.label}
+        </span>
+      </div>
+
+      {/* Room connection state — only shown when NOT connected (avoid clutter) */}
+      {connectionState !== 'connected' && (
+        <span className="text-[11px] text-yellow-400 capitalize animate-pulse-subtle">
+          {connectionState}
+        </span>
+      )}
 
       {/* Node indicator — only shown when agent publishes current_node */}
       {nodeDisplay && (
