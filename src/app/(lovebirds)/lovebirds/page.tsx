@@ -2,47 +2,38 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { LovebirdsOnboarding } from '@/components/lovebirds/onboarding';
+import { Heart } from 'lucide-react';
 
 export default function LovebirdsPage() {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
 
-  const handleStart = useCallback(
-    async (partnerA: string, partnerB: string, returningCoupleId?: string) => {
-      setConnecting(true);
-      try {
-        const res = await fetch('/api/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            agentId: 'lovebirds',
-            agentName: 'LuvByrds',
-            metadata: {
-              partner_a: partnerA,
-              partner_b: partnerB,
-              returning_couple_id: returningCoupleId,
-            },
-          }),
+  const handleStart = useCallback(async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch('/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: 'lovebirds',
+          agentName: 'LuvByrds',
+          metadata: {},
+        }),
+      });
+      const data = await res.json();
+      if (data.token) {
+        const params = new URLSearchParams({
+          token: data.token,
+          sessionId: data.sessionId,
+          url: data.livekitUrl || '',
         });
-        const data = await res.json();
-        if (data.token) {
-          const params = new URLSearchParams({
-            token: data.token,
-            sessionId: data.sessionId,
-            url: data.livekitUrl || '',
-            partnerA,
-            partnerB,
-          });
-          router.push(`/lovebirds/session?${params.toString()}`);
-        }
-      } catch (err) {
-        console.error('Failed to start Lovebirds session:', err);
-        setConnecting(false);
+        router.push(`/lovebirds/session?${params.toString()}`);
       }
-    },
-    [router]
-  );
+    } catch (err) {
+      console.error('Failed to start Lovebirds session:', err);
+      setConnecting(false);
+    }
+  }, [router]);
 
   if (connecting) {
     return (
@@ -55,5 +46,22 @@ export default function LovebirdsPage() {
     );
   }
 
-  return <LovebirdsOnboarding onStart={handleStart} />;
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center space-y-3">
+          <Heart className="w-8 h-8 text-[var(--primary)] mx-auto" />
+          <h1 className="text-3xl font-bold text-[var(--text)]">Lovebirds</h1>
+          <p className="text-[var(--text-muted)] text-sm">AI couples mediation with Raven Voss</p>
+        </div>
+
+        <button
+          onClick={handleStart}
+          className="w-full py-3 rounded-lg bg-[var(--primary)] text-white font-medium hover:opacity-90 transition-opacity"
+        >
+          Start Session
+        </button>
+      </div>
+    </div>
+  );
 }
