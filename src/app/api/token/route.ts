@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     const at = new AccessToken(apiKey, apiSecret, {
       identity,
       ttl: '1h',
-      metadata: metadata ? JSON.stringify(metadata) : undefined,
+      metadata: metadata && Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : undefined,
     });
 
     at.addGrant({
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     const dispatch = new RoomAgentDispatch();
     dispatch.agentName = agentName;
-    if (metadata) {
+    if (metadata && Object.keys(metadata).length > 0) {
       dispatch.metadata = JSON.stringify(metadata);
     }
 

@@ -19,7 +19,6 @@ export default function LovebirdsPage() {
         body: JSON.stringify({
           agentId: 'lovebirds',
           agentName: 'LuvByrds',
-          metadata: {},
         }),
       });
       const data = await res.json();

@@ -19,7 +19,6 @@ export default function MinkaPage() {
         body: JSON.stringify({
           agentId: 'minka',
           agentName: 'minka-moor-primary',
-          metadata: {},
         }),
       });
       const data = await res.json();

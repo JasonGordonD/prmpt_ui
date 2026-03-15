@@ -78,9 +78,7 @@ function SessionConnector({
 
   const handleConnect = () => {
     setStarted(true);
-    session.start({
-      tracks: { microphone: { enabled: true } },
-    }).catch((err) => {
+    session.start().catch((err) => {
       console.error('[SessionWrapper] Failed to start session:', err);
     });
   };
