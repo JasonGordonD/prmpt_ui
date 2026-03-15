@@ -30,6 +30,8 @@ export function ThemeProvider({
             '--text': theme.text,
             '--text-muted': theme.textMuted,
             '--border': theme.border,
+            '--background': theme.background,
+            '--foreground': theme.text,
           } as React.CSSProperties
         }
         className="min-h-screen bg-[var(--bg)] text-[var(--text)]"

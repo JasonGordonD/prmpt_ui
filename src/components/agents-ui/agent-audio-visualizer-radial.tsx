@@ -1,10 +1,13 @@
 'use client';
 
 import { useRef, useEffect, useMemo } from 'react';
+import { useTrackVolume } from '@livekit/components-react';
+import type { TrackReference } from '@livekit/components-core';
 
 type Props = {
   color?: string;
   state?: string;
+  audioTrack?: TrackReference;
   className?: string;
 };
 
@@ -15,10 +18,11 @@ function hexToRgb(hex: string): [number, number, number] {
     : [128, 128, 128];
 }
 
-export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', className = '' }: Props) {
+export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', audioTrack, className = '' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const rgb = useMemo(() => hexToRgb(color), [color]);
+  const volume = useTrackVolume(audioTrack);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -29,11 +33,12 @@ export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', cla
     canvas.width = dim;
     canvas.height = dim;
     let t = 0;
-    const intensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
+    const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
     const segCount = 32;
 
     const draw = () => {
       t += 0.03;
+      const intensity = volume > 0 ? Math.max(baseIntensity, volume * 2) : baseIntensity;
       ctx.clearRect(0, 0, dim, dim);
       const cx = dim / 2;
       const cy = dim / 2;
@@ -59,7 +64,7 @@ export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', cla
     };
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state]);
+  }, [rgb, state, volume]);
 
   return <canvas ref={canvasRef} className={`rounded-full ${className}`} style={{ width: 200, height: 200 }} />;
 }

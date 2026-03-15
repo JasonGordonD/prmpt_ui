@@ -7,9 +7,11 @@ import { Heart } from 'lucide-react';
 export default function LovebirdsPage() {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleStart = useCallback(async () => {
     setConnecting(true);
+    setError('');
     try {
       const res = await fetch('/api/token', {
         method: 'POST',
@@ -28,38 +30,47 @@ export default function LovebirdsPage() {
           url: data.livekitUrl || '',
         });
         router.push(`/lovebirds/session?${params.toString()}`);
+      } else {
+        setError(data.error || 'Failed to connect. Please try again.');
+        setConnecting(false);
       }
     } catch (err) {
       console.error('Failed to start Lovebirds session:', err);
+      setError('Could not connect. Check your internet connection.');
       setConnecting(false);
     }
   }, [router]);
 
-  if (connecting) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 mx-auto border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[var(--text-muted)] text-sm">Setting up your session...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center space-y-3">
+      <div className="w-full max-w-[400px] space-y-6 text-center">
+        <div className="space-y-3">
           <Heart className="w-8 h-8 text-[var(--primary)] mx-auto" />
           <h1 className="text-3xl font-bold text-[var(--text)]">Lovebirds</h1>
-          <p className="text-[var(--text-muted)] text-sm">AI couples mediation with Raven Voss</p>
+          <p className="text-[var(--text-muted)] text-sm">
+            AI couples mediation with Raven Voss
+          </p>
         </div>
+
+        {error && (
+          <div className="px-4 py-3 rounded-xl bg-red-600/10 border border-red-600/20 text-sm text-red-400 animate-fade-in">
+            {error}
+          </div>
+        )}
 
         <button
           onClick={handleStart}
-          className="w-full py-3 rounded-lg bg-[var(--primary)] text-white font-medium hover:opacity-90 transition-opacity"
+          disabled={connecting}
+          className="w-full py-3 rounded-lg bg-[var(--primary)] text-white font-medium btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Start Session
+          {connecting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin-slow" />
+              Connecting...
+            </>
+          ) : (
+            'Start Session'
+          )}
         </button>
       </div>
     </div>

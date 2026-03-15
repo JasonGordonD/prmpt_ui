@@ -1,63 +1,136 @@
 'use client';
 
-import type { RemoteParticipant } from 'livekit-client';
-import { useNodeState } from '@/hooks/use-node-state';
-import { useSentiment } from '@/hooks/use-sentiment';
+import { useMemo } from 'react';
+import { useAgent } from '@livekit/components-react';
+import type { AgentState } from '@livekit/components-react';
 import { useSessionTimer } from '@/hooks/use-session-timer';
 import type { AgentConfig } from '@/lib/agents';
 
 type StatusBarProps = {
-  agentParticipant: RemoteParticipant | undefined;
   agentConfig: AgentConfig;
-  isConnected: boolean;
-  isFinished: boolean;
   className?: string;
-  onEscalationChange?: (escalation: number) => void;
 };
 
-export function StatusBar({
-  agentParticipant,
-  agentConfig,
-  isConnected,
-  isFinished,
-  className = '',
-}: StatusBarProps) {
-  const nodeState = useNodeState(agentParticipant, agentConfig.nodeMap);
-  const sentiment = useSentiment(agentParticipant);
-  const timer = useSessionTimer(isConnected, isFinished);
-  const activeModel = agentParticipant?.attributes?.active_model;
+type StateDotInfo = {
+  color: string;
+  label: string;
+  pulse: boolean;
+};
 
-  const trajectoryArrow =
-    sentiment?.trajectory === 'rising' ? '\u25B2' :
-    sentiment?.trajectory === 'falling' ? '\u25BC' : '\u2192';
+function getStateDot(state: AgentState): StateDotInfo {
+  switch (state) {
+    case 'connecting':
+    case 'pre-connect-buffering':
+    case 'initializing':
+    case 'idle':
+      return { color: '#888', label: 'Connecting...', pulse: true };
+    case 'listening':
+      return { color: '#22c55e', label: 'Listening', pulse: false };
+    case 'thinking':
+      return { color: '#f59e0b', label: 'Thinking', pulse: false };
+    case 'speaking':
+      return { color: '#3b82f6', label: 'Speaking', pulse: false };
+    case 'disconnected':
+      return { color: '#ef4444', label: 'Disconnected', pulse: false };
+    case 'failed':
+      return { color: '#ef4444', label: 'Failed', pulse: false };
+    default:
+      return { color: '#888', label: '—', pulse: false };
+  }
+}
+
+function parseSentiment(raw: string | undefined): { emotion: string; confidence: number } | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      emotion: parsed.primary_emotion ?? parsed.primaryEmotion ?? '—',
+      confidence: parsed.confidence ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
+  const agent = useAgent();
+  const timer = useSessionTimer(agent.isConnected, agent.isFinished);
+
+  const stateDot = useMemo(() => getStateDot(agent.state), [agent.state]);
+
+  // Read participant attributes
+  const attributes = agent.attributes;
+  const currentNode = attributes?.current_node;
+  const activeModel = attributes?.active_model;
+  const sentimentRaw = attributes?.sentiment_data;
+
+  // Map node through nodeMap
+  const nodeDisplay = useMemo(() => {
+    if (!currentNode) return null;
+    const mapped = agentConfig.nodeMap[currentNode];
+    return mapped
+      ? { label: mapped.label, color: mapped.color }
+      : { label: currentNode, color: '#888' };
+  }, [currentNode, agentConfig.nodeMap]);
+
+  // Parse sentiment
+  const sentiment = useMemo(() => parseSentiment(sentimentRaw), [sentimentRaw]);
 
   return (
     <div
-      className={`flex items-center gap-4 px-4 py-2 bg-[var(--surface)] border-b border-[var(--border)] text-xs flex-wrap ${className}`}
+      className={`flex items-center gap-4 px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)] text-xs flex-wrap min-h-[40px] ${className}`}
     >
+      {/* Agent state indicator */}
       <div className="flex items-center gap-2">
         <div
-          className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: nodeState?.color ?? '#888' }}
+          className={`w-2 h-2 rounded-full shrink-0 ${stateDot.pulse ? 'animate-pulse-subtle' : ''}`}
+          style={{ backgroundColor: stateDot.color }}
         />
-        <span className="text-[var(--text)]">{nodeState?.label ?? '\u2014'}</span>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span className="text-[var(--text-muted)]">LLM:</span>
-        <span className="font-mono text-[var(--text)]">{activeModel ?? '\u2014'}</span>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span className="text-[var(--text-muted)]">Sentiment:</span>
-        <span className="text-[var(--text)]">
-          {sentiment
-            ? `${sentiment.primaryEmotion} ${sentiment.confidence.toFixed(2)} ${trajectoryArrow}`
-            : '\u2014'}
+        <span className="text-[13px] font-medium text-[var(--text)]">
+          {stateDot.label}
         </span>
       </div>
 
-      <div className="ml-auto font-mono text-[var(--text)]">{timer}</div>
+      {/* Node indicator */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-[var(--text-muted)]">Node:</span>
+        {nodeDisplay ? (
+          <span
+            className="px-2 py-0.5 text-[11px] font-medium rounded-lg"
+            style={{
+              backgroundColor: `${nodeDisplay.color}20`,
+              color: nodeDisplay.color,
+            }}
+          >
+            {nodeDisplay.label}
+          </span>
+        ) : (
+          <span className="text-[13px] font-medium text-[var(--text-muted)]">—</span>
+        )}
+      </div>
+
+      {/* LLM model indicator */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-[var(--text-muted)]">LLM:</span>
+        <span className="text-[13px] font-medium font-mono text-[var(--text)]">
+          {activeModel || '—'}
+        </span>
+      </div>
+
+      {/* Sentiment display */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-[var(--text-muted)]">Sentiment:</span>
+        <span className="text-[13px] font-medium text-[var(--text)]">
+          {sentiment
+            ? `${sentiment.emotion} ${sentiment.confidence.toFixed(2)}`
+            : '—'}
+        </span>
+      </div>
+
+      {/* Timer */}
+      <div className="ml-auto font-mono text-[13px] font-medium text-[var(--text)] tabular-nums">
+        {timer}
+      </div>
     </div>
   );
 }
