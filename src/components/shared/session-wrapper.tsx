@@ -94,8 +94,8 @@ function SessionWrapperInner({
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get('token') || '';
-  const serverUrl = searchParams.get('url') || '';
+  const token = (searchParams.get('token') || '').trim();
+  const serverUrl = (searchParams.get('url') || '').trim();
 
   if (!token || !serverUrl) {
     return (

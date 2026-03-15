@@ -49,9 +49,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'LiveKit not configured for this agent' }, { status: 500 });
     }
 
-    const apiKey = creds.apiKey;
-    const apiSecret = creds.apiSecret;
-    const livekitUrl = creds.url;
+    const apiKey = creds.apiKey.trim();
+    const apiSecret = creds.apiSecret.trim();
+    const livekitUrl = creds.url.trim();
 
     const sessionId = `${agentId}-${crypto.randomUUID()}`;
     const identity = `${agentId}-user-${crypto.randomUUID()}`;
