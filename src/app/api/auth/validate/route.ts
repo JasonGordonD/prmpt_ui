@@ -8,7 +8,7 @@ function getAgentPassword(agentId: string): string | undefined {
     case 'coaching': return process.env.AGENT_PASSWORD_COACHING;
     case 'lovebirds': return process.env.AGENT_PASSWORD_LOVEBIRDS;
     case 'jrvs': return process.env.AGENT_PASSWORD_JRVS;
-    case 'pack': return process.env.AGENT_PASSWORD_PACK;
+    case 'pack': return process.env.AGENT_PASSWORD_THEPACK;
     default: return undefined;
   }
 }
