@@ -11,8 +11,8 @@ import {
 } from '@livekit/components-react';
 import type { AgentConfig } from '@/lib/agents';
 
-/* ─── Start Audio Overlay ─── */
-function StartAudioOverlay() {
+/* ─── Start Audio Overlay (exported for use in session views) ─── */
+export function StartAudioOverlay() {
   const { canPlayAudio, startAudio } = useAudioPlayback();
 
   if (canPlayAudio) return null;
@@ -41,12 +41,9 @@ function StartAudioOverlay() {
 
 /* ─── Inner session content (must be inside SessionProvider) ─── */
 function SessionContent({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <StartAudioOverlay />
-      {children}
-    </>
-  );
+  // Don't render StartAudioOverlay here — it's rendered by AgentLifecycleView
+  // only after the agent has connected, to avoid overlapping with the connecting spinner
+  return <>{children}</>;
 }
 
 /* ─── Session Connector ─── */

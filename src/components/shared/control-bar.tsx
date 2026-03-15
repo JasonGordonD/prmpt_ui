@@ -104,7 +104,7 @@ export function ControlBar({ onLeave, className = '' }: ControlBarProps) {
   const [chatMessage, setChatMessage] = useState('');
 
   // Mic toggle using real LiveKit track control
-  const { toggle: toggleMic, enabled: micEnabled, buttonProps: micButtonProps } = useTrackToggle({
+  const { toggle: toggleMic, enabled: micEnabled } = useTrackToggle({
     source: Track.Source.Microphone,
   });
 
@@ -153,7 +153,6 @@ export function ControlBar({ onLeave, className = '' }: ControlBarProps) {
         {/* Left group: Mic + Chat */}
         <div className="flex items-center gap-3">
           <button
-            {...micButtonProps}
             onClick={() => toggleMic()}
             className={`flex items-center justify-center w-11 h-11 rounded-lg btn-interactive border ${
               micEnabled

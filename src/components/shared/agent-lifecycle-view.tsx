@@ -5,6 +5,7 @@ import type { AgentConfig } from '@/lib/agents';
 import type { AgentState } from '@livekit/components-react';
 import { ErrorDisplay } from './error-display';
 import { PostSessionView } from './post-session-view';
+import { StartAudioOverlay } from './session-wrapper';
 import { useSessionTimer } from '@/hooks/use-session-timer';
 import { useHasEverConnected } from '@/hooks/use-has-ever-connected';
 
@@ -76,7 +77,12 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
   }
 
   // Active session — canListen or any non-pending, non-finished state
-  return <>{children}</>;
+  return (
+    <>
+      <StartAudioOverlay />
+      {children}
+    </>
+  );
 }
 
 // Re-export agent state type for convenience
