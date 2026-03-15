@@ -3,6 +3,29 @@ import { AccessToken, RoomAgentDispatch, RoomConfiguration } from 'livekit-serve
 import { getAgentById } from '@/lib/agents';
 import crypto from 'crypto';
 
+// Explicit env var references ensure Next.js includes them in the serverless bundle.
+// Dynamic process.env[variable] lookups are not statically analyzable and fail at runtime.
+function getLiveKitCredentials(agentId: string): { apiKey: string; apiSecret: string; url: string } | undefined {
+  switch (agentId) {
+    case 'minka': return {
+      apiKey: process.env.LIVEKIT_API_KEY_MINKA!,
+      apiSecret: process.env.LIVEKIT_API_SECRET_MINKA!,
+      url: process.env.LIVEKIT_URL_MINKA!,
+    };
+    case 'coaching': return {
+      apiKey: process.env.LIVEKIT_API_KEY_COACHING!,
+      apiSecret: process.env.LIVEKIT_API_SECRET_COACHING!,
+      url: process.env.LIVEKIT_URL_COACHING!,
+    };
+    case 'lovebirds': return {
+      apiKey: process.env.LIVEKIT_API_KEY_LOVEBIRDS!,
+      apiSecret: process.env.LIVEKIT_API_SECRET_LOVEBIRDS!,
+      url: process.env.LIVEKIT_URL_LOVEBIRDS!,
+    };
+    default: return undefined;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { agentId, agentName, metadata } = await req.json();
@@ -21,13 +44,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const prefix = agent.livekitEnvPrefix;
-    const apiKey = process.env[`LIVEKIT_API_KEY_${prefix}`];
-    const apiSecret = process.env[`LIVEKIT_API_SECRET_${prefix}`];
-    const livekitUrl = process.env[`LIVEKIT_URL_${prefix}`];
-    if (!apiKey || !apiSecret || !livekitUrl) {
+    const creds = getLiveKitCredentials(agentId);
+    if (!creds || !creds.apiKey || !creds.apiSecret || !creds.url) {
       return NextResponse.json({ error: 'LiveKit not configured for this agent' }, { status: 500 });
     }
+
+    const apiKey = creds.apiKey;
+    const apiSecret = creds.apiSecret;
+    const livekitUrl = creds.url;
 
     const sessionId = `${agentId}-${crypto.randomUUID()}`;
     const identity = `${agentId}-user-${crypto.randomUUID()}`;

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// TEMPORARY HARDCODE — env vars not resolving in Vercel serverless functions.
-// Move back to process.env[agent.passwordEnvKey] once Vercel env var issue is diagnosed.
-const PASSWORDS: Record<string, string> = {
-  minka: 'MinkaKG1',
-  coaching: 'PRMPTec1',
-  lovebirds: 'Luvisblind1',
-};
+// Explicit env var references ensure Next.js includes them in the serverless bundle.
+// Dynamic process.env[variable] lookups are not statically analyzable and fail at runtime.
+function getAgentPassword(agentId: string): string | undefined {
+  switch (agentId) {
+    case 'minka': return process.env.AGENT_PASSWORD_MINKA;
+    case 'coaching': return process.env.AGENT_PASSWORD_COACHING;
+    case 'lovebirds': return process.env.AGENT_PASSWORD_LOVEBIRDS;
+    default: return undefined;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false }, { status: 400 });
     }
 
-    const expectedPassword = PASSWORDS[agentId];
+    const expectedPassword = getAgentPassword(agentId);
     if (!expectedPassword || password !== expectedPassword) {
       return NextResponse.json({ valid: false }, { status: 401 });
     }
