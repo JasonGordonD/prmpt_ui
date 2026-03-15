@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken, RoomAgentDispatch, RoomConfiguration } from 'livekit-server-sdk';
 import { getAgentById } from '@/lib/agents';
-import { getLiveKitCredentials } from '@/lib/server/env-config';
+import { getAgentPassword, getLiveKitCredentials, normalizeAgentId } from '@/lib/server/env-config';
+import { parseRequestBody, readObjectField, readStringField } from '@/lib/server/request-parsing';
 import crypto from 'crypto';
+
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { agentId, agentName, metadata } = await req.json();
+    const parsedBody = await parseRequestBody(req);
+    if (!parsedBody.ok) {
+      return NextResponse.json({ error: parsedBody.error }, { status: 400 });
+    }
+
+    const rawAgentId = readStringField(parsedBody.body, ['agentId', 'agent_id', 'agent']);
+    const agentId = normalizeAgentId(rawAgentId);
+    const agentNameFromRequest = readStringField(parsedBody.body, ['agentName', 'agent_name']);
+    const metadata =
+      readObjectField(parsedBody.body, ['metadata', 'meta', 'context']) ??
+      undefined;
 
     if (!agentId) {
       return NextResponse.json({ error: 'Missing agentId' }, { status: 400 });
@@ -18,7 +31,18 @@ export async function POST(req: NextRequest) {
     }
 
     const cookie = req.cookies.get(`prmpt_access_${agentId}`);
-    if (!cookie || cookie.value !== 'validated') {
+    const isCookieAuthorized = !!cookie && cookie.value === 'validated';
+
+    let isPasswordAuthorized = false;
+    if (!isCookieAuthorized) {
+      const password = readStringField(parsedBody.body, ['password', 'pass', 'accessToken', 'token']);
+      if (password) {
+        const passwordConfig = getAgentPassword(agentId);
+        isPasswordAuthorized = passwordConfig?.value === password;
+      }
+    }
+
+    if (!isCookieAuthorized && !isPasswordAuthorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -50,6 +74,7 @@ export async function POST(req: NextRequest) {
 
     const sessionId = `${agentId}-${crypto.randomUUID()}`;
     const identity = `${agentId}-user-${crypto.randomUUID()}`;
+    const agentName = agentNameFromRequest ?? agent.agentName;
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity,
