@@ -107,7 +107,7 @@ export const AGENTS: AgentConfig[] = [
     id: 'jrvs',
     displayName: 'JRVS',
     description: 'Flagship voice agent',
-    agentName: 'maya-jrvs',
+    agentName: '',
     passwordEnvKey: 'AGENT_PASSWORD_JRVS',
     livekitEnvPrefix: 'JRVS',
     routeGroup: 'jrvs',

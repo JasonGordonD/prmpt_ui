@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
   try {
     const { agentId, agentName, metadata } = await req.json();
 
-    if (!agentId || !agentName) {
-      return NextResponse.json({ error: 'Missing agentId or agentName' }, { status: 400 });
+    if (!agentId) {
+      return NextResponse.json({ error: 'Missing agentId' }, { status: 400 });
     }
 
     const agent = getAgentById(agentId);
@@ -79,15 +79,20 @@ export async function POST(req: NextRequest) {
       canSubscribe: true,
     });
 
-    const dispatch = new RoomAgentDispatch();
-    dispatch.agentName = agentName;
-    if (metadata && Object.keys(metadata).length > 0) {
-      dispatch.metadata = JSON.stringify(metadata);
-    }
+    // Only add explicit agent dispatch if agentName is provided.
+    // Agents using auto-dispatch (no agent_name registered) don't need this —
+    // they automatically join any new room on their LiveKit project.
+    if (agentName) {
+      const dispatch = new RoomAgentDispatch();
+      dispatch.agentName = agentName;
+      if (metadata && Object.keys(metadata).length > 0) {
+        dispatch.metadata = JSON.stringify(metadata);
+      }
 
-    const roomConfig = new RoomConfiguration();
-    roomConfig.agents = [dispatch];
-    at.roomConfig = roomConfig;
+      const roomConfig = new RoomConfiguration();
+      roomConfig.agents = [dispatch];
+      at.roomConfig = roomConfig;
+    }
 
     const token = await at.toJwt();
 
