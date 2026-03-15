@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Track } from 'livekit-client';
 import {
   useTrackToggle,
-  useSessionMessages,
+  useChat,
   useSessionContext,
 } from '@livekit/components-react';
 import { Mic, MicOff, MessageSquare, Paperclip, Send, LogOut, X, Check, FileText } from 'lucide-react';
@@ -98,8 +98,7 @@ function FileUploadButton() {
 /* ─── Main Control Bar ─── */
 
 export function ControlBar({ onLeave, className = '' }: ControlBarProps) {
-  const session = useSessionContext();
-  const { send, isSending } = useSessionMessages(session);
+  const { send, isSending } = useChat();
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
 
