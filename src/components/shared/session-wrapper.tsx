@@ -1,20 +1,25 @@
 'use client';
 
-import { useMemo, useEffect, Suspense } from 'react';
+import { useMemo, useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TokenSource } from 'livekit-client';
 import {
   useSession,
   SessionProvider,
   RoomAudioRenderer,
-  useAudioPlayback,
   useSessionContext,
+  useStartAudio,
+  useEnsureRoom,
 } from '@livekit/components-react';
 import type { AgentConfig } from '@/lib/agents';
 
 /* ─── Start Audio Overlay (exported for use in session views) ─── */
 export function StartAudioOverlay() {
-  const { canPlayAudio, startAudio } = useAudioPlayback();
+  const room = useEnsureRoom();
+  const { mergedProps, canPlayAudio } = useStartAudio({
+    room,
+    props: {},
+  });
 
   if (canPlayAudio) return null;
 
@@ -27,7 +32,7 @@ export function StartAudioOverlay() {
           </svg>
         </div>
         <button
-          onClick={startAudio}
+          onClick={mergedProps.onClick}
           className="px-8 py-4 rounded-lg bg-[var(--primary)] text-white font-medium text-lg btn-interactive min-h-[48px]"
         >
           Start Audio
@@ -40,13 +45,10 @@ export function StartAudioOverlay() {
   );
 }
 
-/* ─── Inner session content (must be inside SessionProvider) ─── */
+/* ─── Session Content (inside SessionProvider) ─── */
 function SessionContent({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {/* RoomAudioRenderer creates <audio> elements for all remote participants' audio tracks.
-          This is what actually makes the agent's voice audible. Without it, the agent's audio
-          track is subscribed but never played through the speakers. */}
       <RoomAudioRenderer />
       {children}
     </>
@@ -69,19 +71,27 @@ function SessionConnector({
   );
 
   const session = useSession(tokenSource, {
-    // Give agents up to 30 seconds to join (default is 20s)
     agentConnectTimeoutMilliseconds: 30_000,
   });
 
+  const [started, setStarted] = useState(false);
+
+  const handleConnect = () => {
+    setStarted(true);
+    session.start({
+      tracks: { microphone: { enabled: true } },
+    }).catch((err) => {
+      console.error('[SessionWrapper] Failed to start session:', err);
+    });
+  };
+
+  // Auto-start: try to start session automatically on mount.
+  // This works because the user already clicked "Start Session" on the landing page,
+  // which is a recent enough user gesture in most browsers.
   useEffect(() => {
-    if (session.connectionState === 'disconnected') {
-      session.start({
-        tracks: { microphone: { enabled: true } },
-      }).catch((err) => {
-        console.error('[SessionWrapper] Failed to start session:', err);
-      });
+    if (!started && session.connectionState === 'disconnected') {
+      handleConnect();
     }
-    // Only start once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -92,7 +102,7 @@ function SessionConnector({
   );
 }
 
-/* ─── Main SessionWrapper (reads URL params, renders connector) ─── */
+/* ─── Main SessionWrapper ─── */
 function SessionWrapperInner({
   children,
 }: {
