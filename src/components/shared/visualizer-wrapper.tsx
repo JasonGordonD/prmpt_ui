@@ -77,8 +77,8 @@ export function VisualizerWrapper({
 
   return (
     <div
-      className={`flex flex-col items-center gap-3 ${compact ? 'py-3' : 'py-4'} ${className}`}
-      style={{ maxHeight: compact ? '150px' : '200px' }}
+      className={`flex flex-col items-center gap-3 ${compact ? 'py-2 sm:py-3' : 'py-3 sm:py-4'} shrink-0 ${className}`}
+      style={{ maxHeight: compact ? '130px' : '180px' }}
     >
       <div className="flex items-center justify-center flex-1 min-h-0">
         {renderVisualizer()}
