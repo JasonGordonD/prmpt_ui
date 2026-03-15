@@ -70,6 +70,8 @@ function SessionConnector({
     if (session.connectionState === 'disconnected') {
       session.start({
         tracks: { microphone: { enabled: true } },
+      }).catch((err) => {
+        console.error('[SessionWrapper] Failed to start session:', err);
       });
     }
     // Only start once on mount
