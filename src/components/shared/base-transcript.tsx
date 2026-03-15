@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Copy, Download, Check } from 'lucide-react';
 import type { ReceivedMessage } from '@livekit/components-core';
 import type { AgentState } from '@livekit/components-react';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownWithInlineMedia } from './markdown-with-inline-media';
 
 /* ─── Types ─── */
 
@@ -102,7 +102,7 @@ function DefaultMessageRenderer({ message, agentName }: MessageRendererProps) {
         </div>
         <div className="rounded-xl px-4 py-2.5 text-sm bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]">
           <div className="prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_code]:bg-[var(--bg)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[var(--primary)] [&_a]:text-[var(--primary)] [&_strong]:text-[var(--text)] [&_blockquote]:border-l-[var(--primary)]">
-            <ReactMarkdown>{text}</ReactMarkdown>
+            <MarkdownWithInlineMedia markdown={text} />
           </div>
         </div>
       </div>

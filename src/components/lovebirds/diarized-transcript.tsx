@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReceivedMessage } from '@livekit/components-core';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownWithInlineMedia } from '@/components/shared/markdown-with-inline-media';
 
 type DiarizedMessageRendererProps = {
   message: ReceivedMessage;
@@ -122,7 +122,7 @@ export function DiarizedMessageRenderer({ message }: DiarizedMessageRendererProp
           <span className="text-[11px] text-[var(--text-muted)] tabular-nums">{time}</span>
         </div>
         <div className={`${styles.text} prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1`}>
-          <ReactMarkdown>{parsedText}</ReactMarkdown>
+          <MarkdownWithInlineMedia markdown={parsedText} />
         </div>
       </div>
     </div>
