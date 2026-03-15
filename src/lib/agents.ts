@@ -82,7 +82,7 @@ export const AGENTS: AgentConfig[] = [
     id: 'lovebirds',
     displayName: 'Lovebirds',
     description: 'AI couples mediation with Raven Voss',
-    agentName: 'lovebirds-primary',
+    agentName: 'LuvByrds',
     passwordEnvKey: 'AGENT_PASSWORD_LOVEBIRDS',
     livekitEnvPrefix: 'LOVEBIRDS',
     routeGroup: 'lovebirds',
