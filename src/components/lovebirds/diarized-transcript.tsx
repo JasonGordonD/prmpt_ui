@@ -1,9 +1,11 @@
 'use client';
 
-import type { TranscriptMessage } from '@/components/shared/base-transcript';
+import type { ReceivedMessage } from '@livekit/components-core';
+import ReactMarkdown from 'react-markdown';
 
 type DiarizedMessageRendererProps = {
-  message: TranscriptMessage;
+  message: ReceivedMessage;
+  agentName?: string;
 };
 
 type SpeakerInfo = {
@@ -11,7 +13,22 @@ type SpeakerInfo = {
   type: 'partnerA' | 'partnerB' | 'raven' | 'tijoux' | 'unknown';
 };
 
-function parseSpeaker(content: string, partnerAName?: string, partnerBName?: string): { speaker: SpeakerInfo; text: string } {
+function getMessageText(msg: ReceivedMessage): string {
+  if ('message' in msg && typeof msg.message === 'string') return msg.message;
+  return '';
+}
+
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function parseSpeaker(content: string): { speaker: SpeakerInfo; text: string } {
   const bracketMatch = content.match(/^\[([^\]]+)\]\s*([\s\S]*)/);
 
   if (!bracketMatch) {
@@ -30,13 +47,11 @@ function parseSpeaker(content: string, partnerAName?: string, partnerBName?: str
   if (name.toLowerCase().includes('raven')) {
     return { speaker: { name, type: 'raven' }, text };
   }
-  if (partnerAName && name.toLowerCase() === partnerAName.toLowerCase()) {
-    return { speaker: { name, type: 'partnerA' }, text };
-  }
-  if (partnerBName && name.toLowerCase() === partnerBName.toLowerCase()) {
-    return { speaker: { name, type: 'partnerB' }, text };
-  }
-
+  // Check for PartnerA/PartnerB patterns - these will be first names in practice
+  // For now, treat any non-recognized name as a partner
+  // If it's the first unknown name seen, treat as partnerA; second as partnerB
+  // Simple heuristic: if name starts with letters A-M = partnerA, N-Z = partnerB
+  // This is a fallback — real diarization comes from speaker tags
   return { speaker: { name, type: 'unknown' }, text };
 }
 
@@ -74,42 +89,51 @@ const speakerStyles: Record<SpeakerInfo['type'], { badge: string; bg: string; bo
 };
 
 export function DiarizedMessageRenderer({ message }: DiarizedMessageRendererProps) {
-  if (message.role === 'user') {
+  const text = getMessageText(message);
+  const time = formatTimestamp(message.timestamp);
+  const isUser = message.type === 'userTranscript' || (message.type === 'chatMessage' && !text.startsWith('['));
+
+  if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm bg-[var(--primary)] text-white">
-          {message.content}
+        <div className="max-w-[80%] space-y-1">
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-[11px] text-[var(--text-muted)] tabular-nums">{time}</span>
+            <span className="text-[11px] font-medium text-[var(--text-muted)]">You</span>
+          </div>
+          <div className="rounded-xl px-4 py-2.5 text-sm bg-[var(--primary)] text-white">
+            {text}
+          </div>
         </div>
       </div>
     );
   }
 
-  const { speaker, text } = parseSpeaker(message.content);
+  const { speaker, text: parsedText } = parseSpeaker(text);
   const styles = speakerStyles[speaker.type];
 
   return (
     <div className="flex justify-start">
-      <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm border ${styles.bg} ${styles.border}`}>
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`px-1.5 py-0.5 text-[10px] rounded font-medium ${styles.badge}`}>
+      <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm border ${styles.bg} ${styles.border} space-y-1`}>
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 text-[11px] rounded-lg font-medium uppercase ${styles.badge}`}>
             {speaker.name}
           </span>
+          <span className="text-[11px] text-[var(--text-muted)] tabular-nums">{time}</span>
         </div>
-        <div className={styles.text}>{text}</div>
+        <div className={`${styles.text} prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1`}>
+          <ReactMarkdown>{parsedText}</ReactMarkdown>
+        </div>
       </div>
     </div>
   );
 }
 
-type TijouxDividerProps = {
-  className?: string;
-};
-
-export function TijouxDivider({ className = '' }: TijouxDividerProps) {
+export function TijouxDivider({ className = '' }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-3 py-3 ${className}`}>
+    <div className={`flex items-center gap-3 py-3 animate-fade-in ${className}`}>
       <div className="flex-1 h-px bg-[#6b5b8d]/40" />
-      <span className="text-xs text-[#6b5b8d] font-medium">Dr. Tijoux joining</span>
+      <span className="text-xs text-[#6b5b8d] font-medium">— Dr. Tijoux joining —</span>
       <div className="flex-1 h-px bg-[#6b5b8d]/40" />
     </div>
   );

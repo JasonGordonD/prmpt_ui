@@ -73,9 +73,9 @@ function DefaultMessageRenderer({ message, agentName }: MessageRendererProps) {
   const text = getMessageText(message);
   const speaker = getMessageSpeaker(message, agentName);
   const time = formatTimestamp(message.timestamp);
-  const isUser = message.type === 'userTranscript' || message.type === 'chatMessage';
+  const isAgent = message.type === 'agentTranscript';
 
-  if (isUser && message.type !== 'agentTranscript') {
+  if (!isAgent) {
     return (
       <div className="flex justify-end">
         <div className="max-w-[80%] space-y-1">

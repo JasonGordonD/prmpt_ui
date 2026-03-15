@@ -2,12 +2,12 @@
 
 import { useRef, useEffect, useMemo } from 'react';
 import { useTrackVolume } from '@livekit/components-react';
-import type { TrackReferenceOrPlaceholder } from '@livekit/components-core';
+import type { TrackReference } from '@livekit/components-core';
 
 type Props = {
   color?: string;
   state?: string;
-  audioTrack?: TrackReferenceOrPlaceholder;
+  audioTrack?: TrackReference;
   className?: string;
   barCount?: number;
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { TrackReferenceOrPlaceholder } from '@livekit/components-core';
+import type { TrackReference } from '@livekit/components-core';
 import type { AgentState } from '@livekit/components-react';
 import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura';
 import { AgentAudioVisualizerWave } from '@/components/agents-ui/agent-audio-visualizer-wave';
@@ -12,7 +12,7 @@ import { AgentAudioVisualizerGrid } from '@/components/agents-ui/agent-audio-vis
 type VisualizerType = 'aura' | 'wave' | 'radial' | 'bar' | 'grid';
 
 type VisualizerWrapperProps = {
-  audioTrack?: TrackReferenceOrPlaceholder;
+  audioTrack?: TrackReference;
   state?: AgentState;
   color?: string;
   colorShift?: number;

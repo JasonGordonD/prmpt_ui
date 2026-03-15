@@ -1,24 +1,28 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 
 type HandoffTransitionProps = {
-  currentNode: string;
+  currentNode: string | undefined;
   onTransition: (isTijoux: boolean) => void;
   children: React.ReactNode;
 };
 
 export function HandoffTransition({ currentNode, onTransition, children }: HandoffTransitionProps) {
-  const isTijoux = useMemo(() => {
-    const result = currentNode === 'Tijoux (closing)';
-    onTransition(result);
-    return result;
-  }, [currentNode, onTransition]);
+  const isTijoux = currentNode === 'Tijoux (closing)';
+  const prevRef = useRef(false);
+
+  useEffect(() => {
+    if (isTijoux !== prevRef.current) {
+      prevRef.current = isTijoux;
+      onTransition(isTijoux);
+    }
+  }, [isTijoux, onTransition]);
 
   return (
     <div
       style={{
-        transition: 'all 0.8s ease-in-out',
+        transition: 'filter 0.8s ease-in-out',
         filter: isTijoux ? 'hue-rotate(30deg)' : 'none',
       }}
     >
