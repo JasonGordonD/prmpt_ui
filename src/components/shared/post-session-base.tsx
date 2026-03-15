@@ -51,7 +51,7 @@ export function PostSessionBase({
         {onRetry && (
           <button
             onClick={onRetry}
-            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-[var(--primary)] text-white font-medium hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-[var(--primary)] text-white font-medium btn-interactive min-h-[48px]"
           >
             <RotateCcw className="w-4 h-4" />
             Try Again
@@ -74,7 +74,7 @@ export function PostSessionBase({
         {transcript && (
           <button
             onClick={handleDownloadTranscript}
-            className="flex items-center gap-2 px-4 py-2 text-sm border border-[var(--border)] rounded-lg text-[var(--text)] hover:bg-[var(--surface)] transition-colors"
+            className="flex items-center gap-2 px-4 py-3 text-sm border border-[var(--border)] rounded-lg text-[var(--text)] btn-interactive min-h-[44px]"
           >
             <Download className="w-4 h-4" />
             Download Transcript
@@ -83,7 +83,7 @@ export function PostSessionBase({
         {summary && (
           <button
             onClick={handleCopySummary}
-            className="flex items-center gap-2 px-4 py-2 text-sm border border-[var(--border)] rounded-lg text-[var(--text)] hover:bg-[var(--surface)] transition-colors"
+            className="flex items-center gap-2 px-4 py-3 text-sm border border-[var(--border)] rounded-lg text-[var(--text)] btn-interactive min-h-[44px]"
           >
             <Copy className="w-4 h-4" />
             Copy Summary

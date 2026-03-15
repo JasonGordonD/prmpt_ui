@@ -84,7 +84,7 @@ export default function CoachingPostSessionPage({ params }: { params: Promise<{ 
         <div className="flex justify-center pt-4">
           <button
             onClick={() => router.push('/coaching')}
-            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-[var(--primary)] text-white font-medium hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-[var(--primary)] text-white font-medium btn-interactive min-h-[48px]"
           >
             <Calendar className="w-4 h-4" />
             Schedule Next Session
