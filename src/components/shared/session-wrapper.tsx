@@ -6,6 +6,7 @@ import { TokenSource } from 'livekit-client';
 import {
   useSession,
   SessionProvider,
+  RoomAudioRenderer,
   useAudioPlayback,
   useSessionContext,
 } from '@livekit/components-react';
@@ -41,9 +42,15 @@ export function StartAudioOverlay() {
 
 /* ─── Inner session content (must be inside SessionProvider) ─── */
 function SessionContent({ children }: { children: React.ReactNode }) {
-  // Don't render StartAudioOverlay here — it's rendered by AgentLifecycleView
-  // only after the agent has connected, to avoid overlapping with the connecting spinner
-  return <>{children}</>;
+  return (
+    <>
+      {/* RoomAudioRenderer creates <audio> elements for all remote participants' audio tracks.
+          This is what actually makes the agent's voice audible. Without it, the agent's audio
+          track is subscribed but never played through the speakers. */}
+      <RoomAudioRenderer />
+      {children}
+    </>
+  );
 }
 
 /* ─── Session Connector ─── */
