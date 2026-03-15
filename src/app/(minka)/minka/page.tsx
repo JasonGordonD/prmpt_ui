@@ -17,7 +17,7 @@ export default function MinkaPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             agentId: 'minka',
-            agentName: 'minka-qualification',
+            agentName: 'minka-moor-primary',
             metadata: { caller_name: callerName },
           }),
         });

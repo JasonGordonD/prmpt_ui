@@ -17,7 +17,7 @@ export default function LovebirdsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             agentId: 'lovebirds',
-            agentName: 'lovebirds',
+            agentName: 'lovebirds-primary',
             metadata: {
               partner_a: partnerA,
               partner_b: partnerB,
