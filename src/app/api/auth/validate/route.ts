@@ -15,6 +15,20 @@ export async function POST(req: NextRequest) {
     }
 
     const expectedPassword = process.env[agent.passwordEnvKey];
+
+    // TEMPORARY DEBUG — remove after diagnosing password validation issue
+    console.log('[auth-debug]', {
+      agentId,
+      envKey: agent.passwordEnvKey,
+      envVarExists: !!expectedPassword,
+      envVarLength: expectedPassword?.length ?? 0,
+      submittedLength: password.length,
+      exactMatch: expectedPassword === password,
+      envVarTrimmedLength: expectedPassword?.trim().length ?? 0,
+      submittedTrimmedLength: password.trim().length,
+      trimmedMatch: expectedPassword?.trim() === password.trim(),
+    });
+
     if (!expectedPassword || password !== expectedPassword) {
       return NextResponse.json({ valid: false }, { status: 401 });
     }
