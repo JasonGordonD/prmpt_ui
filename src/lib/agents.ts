@@ -4,6 +4,7 @@ export type AgentConfig = {
   description: string;
   agentName: string;
   passwordEnvKey: string;
+  livekitEnvPrefix: string;
   routeGroup: string;
   theme: {
     background: string;
@@ -30,6 +31,7 @@ export const AGENTS: AgentConfig[] = [
     description: 'Voice experience with Minka Moor',
     agentName: 'minka-qualification',
     passwordEnvKey: 'AGENT_PASSWORD_MINKA',
+    livekitEnvPrefix: 'MINKA',
     routeGroup: 'minka',
     theme: {
       background: '#1a1a2e',
@@ -56,6 +58,7 @@ export const AGENTS: AgentConfig[] = [
     description: 'Premium executive coaching with Ara Thompson',
     agentName: 'central',
     passwordEnvKey: 'AGENT_PASSWORD_COACHING',
+    livekitEnvPrefix: 'COACHING',
     routeGroup: 'coaching',
     theme: {
       background: '#0f1923',
@@ -81,6 +84,7 @@ export const AGENTS: AgentConfig[] = [
     description: 'AI couples mediation with Raven Voss',
     agentName: 'lovebirds',
     passwordEnvKey: 'AGENT_PASSWORD_LOVEBIRDS',
+    livekitEnvPrefix: 'LOVEBIRDS',
     routeGroup: 'lovebirds',
     theme: {
       background: '#1c1410',

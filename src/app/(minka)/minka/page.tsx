@@ -26,7 +26,7 @@ export default function MinkaPage() {
           const params = new URLSearchParams({
             token: data.token,
             sessionId: data.sessionId,
-            url: data.url || '',
+            url: data.livekitUrl || '',
           });
           router.push(`/minka/session?${params.toString()}`);
         }

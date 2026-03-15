@@ -21,10 +21,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const apiKey = process.env.LIVEKIT_API_KEY;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-    if (!apiKey || !apiSecret) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    const prefix = agent.livekitEnvPrefix;
+    const apiKey = process.env[`LIVEKIT_API_KEY_${prefix}`];
+    const apiSecret = process.env[`LIVEKIT_API_SECRET_${prefix}`];
+    const livekitUrl = process.env[`LIVEKIT_URL_${prefix}`];
+    if (!apiKey || !apiSecret || !livekitUrl) {
+      return NextResponse.json({ error: 'LiveKit not configured for this agent' }, { status: 500 });
     }
 
     const sessionId = `${agentId}-${crypto.randomUUID()}`;
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       token,
       sessionId,
-      url: process.env.LIVEKIT_URL,
+      livekitUrl,
     });
   } catch (err) {
     console.error('Token generation error:', err);

@@ -30,7 +30,7 @@ export default function LovebirdsPage() {
           const params = new URLSearchParams({
             token: data.token,
             sessionId: data.sessionId,
-            url: data.url || '',
+            url: data.livekitUrl || '',
             partnerA,
             partnerB,
           });

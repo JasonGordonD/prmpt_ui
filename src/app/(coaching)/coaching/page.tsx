@@ -25,7 +25,7 @@ export default function CoachingPage() {
           const params = new URLSearchParams({
             token: data.token,
             sessionId: data.sessionId,
-            url: data.url || '',
+            url: data.livekitUrl || '',
             agentName,
           });
           router.push(`/coaching/session?${params.toString()}`);
