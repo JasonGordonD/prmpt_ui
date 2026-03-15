@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgentById } from '@/lib/agents';
+
+// TEMPORARY HARDCODE — env vars not resolving in Vercel serverless functions.
+// Move back to process.env[agent.passwordEnvKey] once Vercel env var issue is diagnosed.
+const PASSWORDS: Record<string, string> = {
+  minka: 'MinkaKG1',
+  coaching: 'PRMPTec1',
+  lovebirds: 'Luvisblind1',
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,26 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false }, { status: 400 });
     }
 
-    const agent = getAgentById(agentId);
-    if (!agent) {
-      return NextResponse.json({ valid: false }, { status: 400 });
-    }
-
-    const expectedPassword = process.env[agent.passwordEnvKey];
-
-    // TEMPORARY DEBUG — remove after diagnosing password validation issue
-    console.log('[auth-debug]', {
-      agentId,
-      envKey: agent.passwordEnvKey,
-      envVarExists: !!expectedPassword,
-      envVarLength: expectedPassword?.length ?? 0,
-      submittedLength: password.length,
-      exactMatch: expectedPassword === password,
-      envVarTrimmedLength: expectedPassword?.trim().length ?? 0,
-      submittedTrimmedLength: password.trim().length,
-      trimmedMatch: expectedPassword?.trim() === password.trim(),
-    });
-
+    const expectedPassword = PASSWORDS[agentId];
     if (!expectedPassword || password !== expectedPassword) {
       return NextResponse.json({ valid: false }, { status: 401 });
     }
