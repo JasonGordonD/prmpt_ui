@@ -22,9 +22,9 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
   const hasEverConnected = useHasEverConnected(agent.state);
   const agentStartPath = `/${agentConfig.routeGroup}`;
 
-  // If we haven't ever moved past disconnected, show connecting state.
   // The initial useAgent state is 'disconnected' with isFinished=true, isPending=false.
-  // We must NOT treat that as a real "session finished" — it's just the pre-connection state.
+  // We must NOT treat that as "session finished" — it's just the pre-connection state.
+  // Show a brief connecting spinner only for this initial state before the room connects.
   if (!hasEverConnected && agent.state === 'disconnected') {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-6 animate-view-enter">
@@ -49,7 +49,7 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
     );
   }
 
-  // Finished successfully — post-session view (only after a real session)
+  // Finished successfully (clean disconnect after a real session)
   if (hasEverConnected && agent.isFinished) {
     return (
       <PostSessionView
@@ -61,22 +61,11 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
     );
   }
 
-  // Pending — connecting/initializing
-  if (agent.isPending) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen gap-6 animate-view-enter">
-        <div className="w-16 h-16 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin-slow" />
-        <div className="text-center space-y-2">
-          <h2 className="text-lg font-medium text-[var(--text)]">Connecting...</h2>
-          <p className="text-sm text-[var(--text-muted)]">
-            Setting up your session with {agentConfig.displayName}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Active session — canListen or any non-pending, non-finished state
+  // For ALL other states — connecting, initializing, idle, listening, thinking, speaking —
+  // show the full session UI. The session UI components gracefully handle the agent not
+  // being fully ready yet (transcript shows "Waiting...", visualizer idles, status bar
+  // shows "Connecting..." dot). This lets users see the session interface immediately
+  // after the room connects, even before the agent joins.
   return (
     <>
       <StartAudioOverlay />
