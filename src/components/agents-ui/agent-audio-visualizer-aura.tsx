@@ -1,15 +1,17 @@
 'use client';
 
 import { useRef, useEffect, useMemo } from 'react';
+import { useTrackVolume } from '@livekit/components-react';
+import type { TrackReferenceOrPlaceholder } from '@livekit/components-core';
 
 type AuraSize = 'icon' | 'sm' | 'md' | 'lg' | 'xl';
 
 const sizeMap: Record<AuraSize, number> = {
   icon: 48,
   sm: 80,
-  md: 160,
-  lg: 240,
-  xl: 320,
+  md: 140,
+  lg: 200,
+  xl: 280,
 };
 
 type AgentAudioVisualizerAuraProps = {
@@ -17,6 +19,7 @@ type AgentAudioVisualizerAuraProps = {
   color?: string;
   colorShift?: number;
   state?: string;
+  audioTrack?: TrackReferenceOrPlaceholder;
   className?: string;
 };
 
@@ -32,13 +35,16 @@ export function AgentAudioVisualizerAura({
   color = '#c9302c',
   colorShift = 0.2,
   state = 'idle',
+  audioTrack,
   className = '',
 }: AgentAudioVisualizerAuraProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const dim = sizeMap[size];
-
   const rgb = useMemo(() => hexToRgb(color), [color]);
+
+  // Real audio volume from track (0-1 range)
+  const volume = useTrackVolume(audioTrack);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,11 +53,14 @@ export function AgentAudioVisualizerAura({
     if (!ctx) return;
 
     let t = 0;
-    const intensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.6 : 0.3;
+    const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.6 : 0.3;
 
     const draw = () => {
       t += 0.02;
       ctx.clearRect(0, 0, dim, dim);
+
+      // Use real volume if available, otherwise fall back to state-based intensity
+      const intensity = volume > 0 ? Math.max(baseIntensity, volume * 2) : baseIntensity;
 
       const cx = dim / 2;
       const cy = dim / 2;
@@ -89,7 +98,7 @@ export function AgentAudioVisualizerAura({
 
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [dim, rgb, colorShift, state]);
+  }, [dim, rgb, colorShift, state, volume]);
 
   return (
     <canvas

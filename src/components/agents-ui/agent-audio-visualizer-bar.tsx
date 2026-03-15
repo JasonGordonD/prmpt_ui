@@ -1,10 +1,13 @@
 'use client';
 
 import { useRef, useEffect, useMemo } from 'react';
+import { useTrackVolume } from '@livekit/components-react';
+import type { TrackReferenceOrPlaceholder } from '@livekit/components-core';
 
 type Props = {
   color?: string;
   state?: string;
+  audioTrack?: TrackReferenceOrPlaceholder;
   className?: string;
   barCount?: number;
 };
@@ -16,10 +19,11 @@ function hexToRgb(hex: string): [number, number, number] {
     : [128, 128, 128];
 }
 
-export function AgentAudioVisualizerBar({ color = '#888', state = 'idle', className = '', barCount = 24 }: Props) {
+export function AgentAudioVisualizerBar({ color = '#888', state = 'idle', audioTrack, className = '', barCount = 24 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const rgb = useMemo(() => hexToRgb(color), [color]);
+  const volume = useTrackVolume(audioTrack);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -30,10 +34,11 @@ export function AgentAudioVisualizerBar({ color = '#888', state = 'idle', classN
     canvas.width = w;
     canvas.height = h;
     let t = 0;
-    const intensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
+    const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
 
     const draw = () => {
       t += 0.05;
+      const intensity = volume > 0 ? Math.max(baseIntensity, volume * 2) : baseIntensity;
       ctx.clearRect(0, 0, w, h);
       const barW = (w / barCount) * 0.7;
       const gap = w / barCount;
@@ -47,7 +52,7 @@ export function AgentAudioVisualizerBar({ color = '#888', state = 'idle', classN
     };
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state, barCount]);
+  }, [rgb, state, barCount, volume]);
 
   return <canvas ref={canvasRef} className={`w-full max-w-[300px] h-[150px] ${className}`} />;
 }

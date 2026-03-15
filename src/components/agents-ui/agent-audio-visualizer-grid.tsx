@@ -1,10 +1,13 @@
 'use client';
 
 import { useRef, useEffect, useMemo } from 'react';
+import { useTrackVolume } from '@livekit/components-react';
+import type { TrackReferenceOrPlaceholder } from '@livekit/components-core';
 
 type Props = {
   color?: string;
   state?: string;
+  audioTrack?: TrackReferenceOrPlaceholder;
   className?: string;
 };
 
@@ -15,10 +18,11 @@ function hexToRgb(hex: string): [number, number, number] {
     : [128, 128, 128];
 }
 
-export function AgentAudioVisualizerGrid({ color = '#888', state = 'idle', className = '' }: Props) {
+export function AgentAudioVisualizerGrid({ color = '#888', state = 'idle', audioTrack, className = '' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const rgb = useMemo(() => hexToRgb(color), [color]);
+  const volume = useTrackVolume(audioTrack);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -29,12 +33,13 @@ export function AgentAudioVisualizerGrid({ color = '#888', state = 'idle', class
     canvas.width = w;
     canvas.height = h;
     let t = 0;
-    const intensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
+    const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
     const cols = 12, rows = 6;
     const cellW = w / cols, cellH = h / rows;
 
     const draw = () => {
       t += 0.04;
+      const intensity = volume > 0 ? Math.max(baseIntensity, volume * 2) : baseIntensity;
       ctx.clearRect(0, 0, w, h);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -48,7 +53,7 @@ export function AgentAudioVisualizerGrid({ color = '#888', state = 'idle', class
     };
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state]);
+  }, [rgb, state, volume]);
 
   return <canvas ref={canvasRef} className={`w-full max-w-[300px] h-[150px] ${className}`} />;
 }
