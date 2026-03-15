@@ -11,6 +11,7 @@
   "dependencies": {
     "@livekit/components-react": "^2.9.20",
     "@supabase/supabase-js": "^2.99.1",
+    "@vercel/speed-insights": "^2.0.0",
     "clsx": "^2.1.1",
     "livekit-client": "^2.17.3",
     "livekit-server-sdk": "^2.15.0",
