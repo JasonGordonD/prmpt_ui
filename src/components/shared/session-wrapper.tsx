@@ -64,7 +64,10 @@ function SessionConnector({
     [serverUrl, token]
   );
 
-  const session = useSession(tokenSource);
+  const session = useSession(tokenSource, {
+    // Give agents up to 30 seconds to join (default is 20s)
+    agentConnectTimeoutMilliseconds: 30_000,
+  });
 
   useEffect(() => {
     if (session.connectionState === 'disconnected') {
