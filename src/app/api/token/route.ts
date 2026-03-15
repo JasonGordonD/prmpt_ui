@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken, RoomAgentDispatch, RoomConfiguration } from 'livekit-server-sdk';
 import { getAgentById } from '@/lib/agents';
 import { getAgentPassword, getLiveKitCredentials, normalizeAgentId } from '@/lib/server/env-config';
-import { parseRequestBody, readObjectField, readStringField } from '@/lib/server/request-parsing';
+import {
+  parseRequestBody,
+  readCookieValue,
+  readObjectField,
+  readStringField,
+} from '@/lib/server/request-parsing';
 import crypto from 'crypto';
 
 export const runtime = 'nodejs';
@@ -30,8 +35,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unknown agent' }, { status: 400 });
     }
 
-    const cookie = req.cookies.get(`prmpt_access_${agentId}`);
-    const isCookieAuthorized = !!cookie && cookie.value === 'validated';
+    const cookieValue = readCookieValue(req, `prmpt_access_${agentId}`);
+    const isCookieAuthorized = cookieValue === 'validated';
 
     let isPasswordAuthorized = false;
     if (!isCookieAuthorized) {
@@ -65,7 +70,14 @@ export async function POST(req: NextRequest) {
         payload.blankKeys = envConfig?.blankKeys ?? [];
       }
 
-      return NextResponse.json(payload, { status: 500 });
+      return NextResponse.json(
+        {
+          ...payload,
+          errorCode: 'LIVEKIT_NOT_CONFIGURED',
+          resolvedKeys: envConfig?.resolvedKeys,
+        },
+        { status: 500 }
+      );
     }
 
     const apiKey = envConfig.credentials.apiKey;
@@ -113,6 +125,14 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('Token generation error:', err);
-    return NextResponse.json({ error: 'Failed to generate token' }, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json(
+      {
+        error: 'Failed to generate token',
+        errorCode: 'TOKEN_GENERATION_FAILED',
+        ...(process.env.NODE_ENV !== 'production' ? { details: errorMessage } : {}),
+      },
+      { status: 500 }
+    );
   }
 }

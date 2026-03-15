@@ -93,3 +93,33 @@ export function readObjectField(
 
   return undefined;
 }
+
+export function readCookieValue(req: NextRequest, cookieName: string): string | undefined {
+  try {
+    const cookie = req.cookies.get(cookieName);
+    if (cookie?.value) {
+      return cookie.value;
+    }
+  } catch {
+    // Fall through to raw header parsing for malformed cookie payloads.
+  }
+
+  const cookieHeader = req.headers.get('cookie');
+  if (!cookieHeader) {
+    return undefined;
+  }
+
+  const parts = cookieHeader.split(';');
+  for (const part of parts) {
+    const [rawKey, ...rawValueParts] = part.split('=');
+    if (!rawKey) {
+      continue;
+    }
+
+    if (rawKey.trim() === cookieName) {
+      return rawValueParts.join('=').trim() || undefined;
+    }
+  }
+
+  return undefined;
+}
