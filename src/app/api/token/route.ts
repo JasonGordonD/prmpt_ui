@@ -56,6 +56,13 @@ export async function POST(req: NextRequest) {
 
     const creds = getLiveKitCredentials(agentId);
     if (!creds || !creds.apiKey || !creds.apiSecret || !creds.url) {
+      // Log which credentials are missing to help diagnose env var issues
+      console.error(`[token] LiveKit not configured for agent "${agentId}":`, {
+        hasCreds: !!creds,
+        hasApiKey: !!creds?.apiKey,
+        hasApiSecret: !!creds?.apiSecret,
+        hasUrl: !!creds?.url,
+      });
       return NextResponse.json({ error: 'LiveKit not configured for this agent' }, { status: 500 });
     }
 
