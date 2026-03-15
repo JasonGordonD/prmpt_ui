@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PRMPT UI
 
-## Getting Started
+Multi-agent Next.js frontend for PRMPT voice agents (Minka, Coaching, Lovebirds, JRVS, The Pack).
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Required environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Each agent requires three LiveKit credentials and one access password.
 
-## Learn More
+### Minka
+- `LIVEKIT_API_KEY_MINKA`
+- `LIVEKIT_API_SECRET_MINKA`
+- `LIVEKIT_URL_MINKA`
+- `AGENT_PASSWORD_MINKA`
 
-To learn more about Next.js, take a look at the following resources:
+### Coaching
+- `LIVEKIT_API_KEY_COACHING`
+- `LIVEKIT_API_SECRET_COACHING`
+- `LIVEKIT_URL_COACHING`
+- `AGENT_PASSWORD_COACHING`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Lovebirds
+- `LIVEKIT_API_KEY_LOVEBIRDS`
+- `LIVEKIT_API_SECRET_LOVEBIRDS`
+- `LIVEKIT_URL_LOVEBIRDS`
+- `AGENT_PASSWORD_LOVEBIRDS`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### JRVS
+- `LIVEKIT_API_KEY_JRVS`
+- `LIVEKIT_API_SECRET_JRVS`
+- `LIVEKIT_URL_JRVS`
+- `AGENT_PASSWORD_JRVS`
 
-## Deploy on Vercel
+### The Pack
+- `LIVEKIT_API_KEY_PACK` *(preferred)* or `LIVEKIT_API_KEY_THEPACK` *(legacy alias)*
+- `LIVEKIT_API_SECRET_PACK` *(preferred)* or `LIVEKIT_API_SECRET_THEPACK` *(legacy alias)*
+- `LIVEKIT_URL_PACK` *(preferred)* or `LIVEKIT_URL_THEPACK` *(legacy alias)*
+- `AGENT_PASSWORD_PACK` *(preferred)* or `AGENT_PASSWORD_THEPACK` *(legacy alias)*
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment checklist (Vercel)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Add all required variables in Vercel Project Settings → Environment Variables.
+2. Ensure variables are set for the correct scope (**Production**, and optionally Preview/Development).
+3. Redeploy after env var updates.
+4. Verify:
+   - `/api/debug/env` shows expected env presence booleans.
+   - `/jrvs` → Start Session calls `/api/token` without `LiveKit not configured for this agent` errors.
+
+## Notes
+
+- JRVS currently uses named dispatch and sends `agentName="JRVS"` in token requests.
+- The Pack supports both `*_PACK` and legacy `*_THEPACK` env var names.

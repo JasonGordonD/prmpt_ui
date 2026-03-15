@@ -1,40 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken, RoomAgentDispatch, RoomConfiguration } from 'livekit-server-sdk';
 import { getAgentById } from '@/lib/agents';
+import { getLiveKitCredentials } from '@/lib/server/env-config';
 import crypto from 'crypto';
-
-// Explicit env var references ensure Next.js includes them in the serverless bundle.
-// Dynamic process.env[variable] lookups are not statically analyzable and fail at runtime.
-function getLiveKitCredentials(agentId: string): { apiKey: string; apiSecret: string; url: string } | undefined {
-  switch (agentId) {
-    case 'minka': return {
-      apiKey: process.env.LIVEKIT_API_KEY_MINKA!,
-      apiSecret: process.env.LIVEKIT_API_SECRET_MINKA!,
-      url: process.env.LIVEKIT_URL_MINKA!,
-    };
-    case 'coaching': return {
-      apiKey: process.env.LIVEKIT_API_KEY_COACHING!,
-      apiSecret: process.env.LIVEKIT_API_SECRET_COACHING!,
-      url: process.env.LIVEKIT_URL_COACHING!,
-    };
-    case 'lovebirds': return {
-      apiKey: process.env.LIVEKIT_API_KEY_LOVEBIRDS!,
-      apiSecret: process.env.LIVEKIT_API_SECRET_LOVEBIRDS!,
-      url: process.env.LIVEKIT_URL_LOVEBIRDS!,
-    };
-    case 'jrvs': return {
-      apiKey: process.env.LIVEKIT_API_KEY_JRVS!,
-      apiSecret: process.env.LIVEKIT_API_SECRET_JRVS!,
-      url: process.env.LIVEKIT_URL_JRVS!,
-    };
-    case 'pack': return {
-      apiKey: process.env.LIVEKIT_API_KEY_PACK!,
-      apiSecret: process.env.LIVEKIT_API_SECRET_PACK!,
-      url: process.env.LIVEKIT_URL_PACK!,
-    };
-    default: return undefined;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -54,21 +22,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const creds = getLiveKitCredentials(agentId);
-    if (!creds || !creds.apiKey || !creds.apiSecret || !creds.url) {
-      // Log which credentials are missing to help diagnose env var issues
+    const envConfig = getLiveKitCredentials(agentId);
+    if (!envConfig || !envConfig.isConfigured || !envConfig.credentials) {
       console.error(`[token] LiveKit not configured for agent "${agentId}":`, {
-        hasCreds: !!creds,
-        hasApiKey: !!creds?.apiKey,
-        hasApiSecret: !!creds?.apiSecret,
-        hasUrl: !!creds?.url,
+        missingKeys: envConfig?.missingKeys ?? [],
+        blankKeys: envConfig?.blankKeys ?? [],
+        resolvedKeys: envConfig?.resolvedKeys,
+        candidateKeys: envConfig?.candidateKeys,
+        nodeEnv: process.env.NODE_ENV,
       });
-      return NextResponse.json({ error: 'LiveKit not configured for this agent' }, { status: 500 });
+
+      const payload: { error: string; missingKeys?: string[]; blankKeys?: string[] } = {
+        error: 'LiveKit not configured for this agent',
+      };
+
+      if (process.env.NODE_ENV !== 'production') {
+        payload.missingKeys = envConfig?.missingKeys ?? [];
+        payload.blankKeys = envConfig?.blankKeys ?? [];
+      }
+
+      return NextResponse.json(payload, { status: 500 });
     }
 
-    const apiKey = creds.apiKey.trim();
-    const apiSecret = creds.apiSecret.trim();
-    const livekitUrl = creds.url.trim();
+    const apiKey = envConfig.credentials.apiKey;
+    const apiSecret = envConfig.credentials.apiSecret;
+    const livekitUrl = envConfig.credentials.url;
 
     const sessionId = `${agentId}-${crypto.randomUUID()}`;
     const identity = `${agentId}-user-${crypto.randomUUID()}`;

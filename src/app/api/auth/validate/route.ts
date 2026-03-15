@@ -1,17 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Explicit env var references ensure Next.js includes them in the serverless bundle.
-// Dynamic process.env[variable] lookups are not statically analyzable and fail at runtime.
-function getAgentPassword(agentId: string): string | undefined {
-  switch (agentId) {
-    case 'minka': return process.env.AGENT_PASSWORD_MINKA;
-    case 'coaching': return process.env.AGENT_PASSWORD_COACHING;
-    case 'lovebirds': return process.env.AGENT_PASSWORD_LOVEBIRDS;
-    case 'jrvs': return process.env.AGENT_PASSWORD_JRVS;
-    case 'pack': return process.env.AGENT_PASSWORD_THEPACK;
-    default: return undefined;
-  }
-}
+import { getAgentPassword } from '@/lib/server/env-config';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,8 +9,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false }, { status: 400 });
     }
 
-    const expectedPassword = getAgentPassword(agentId);
+    const passwordConfig = getAgentPassword(agentId);
+    const expectedPassword = passwordConfig?.value;
+
     if (!expectedPassword || password !== expectedPassword) {
+      if (!expectedPassword) {
+        console.error(`[auth] Password env missing for agent "${agentId}":`, {
+          missingKeys: passwordConfig?.missingKeys ?? [],
+          blankKeys: passwordConfig?.blankKeys ?? [],
+          resolvedKey: passwordConfig?.resolvedKey,
+          candidateKeys: passwordConfig?.candidateKeys ?? [],
+        });
+      }
       return NextResponse.json({ valid: false }, { status: 401 });
     }
 
