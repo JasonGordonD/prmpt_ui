@@ -58,7 +58,7 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
 
   const stateDot = useMemo(() => getStateDot(agent.state), [agent.state]);
 
-  // Read participant attributes
+  // Read participant attributes (published by backend agent)
   const attributes = agent.attributes;
   const currentNode = attributes?.current_node;
   const activeModel = attributes?.active_model;
@@ -78,9 +78,9 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
 
   return (
     <div
-      className={`flex items-center gap-4 px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)] text-xs flex-wrap min-h-[40px] ${className}`}
+      className={`flex items-center gap-4 px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)] text-xs flex-wrap min-h-[40px] shrink-0 ${className}`}
     >
-      {/* Agent state indicator */}
+      {/* Agent state indicator — always shown */}
       <div className="flex items-center gap-2">
         <div
           className={`w-2 h-2 rounded-full shrink-0 ${stateDot.pulse ? 'animate-pulse-subtle' : ''}`}
@@ -91,10 +91,9 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
         </span>
       </div>
 
-      {/* Node indicator */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-[var(--text-muted)]">Node:</span>
-        {nodeDisplay ? (
+      {/* Node indicator — only shown when agent publishes current_node */}
+      {nodeDisplay && (
+        <div className="flex items-center gap-1.5">
           <span
             className="px-2 py-0.5 text-[11px] font-medium rounded-lg"
             style={{
@@ -104,30 +103,30 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
           >
             {nodeDisplay.label}
           </span>
-        ) : (
-          <span className="text-[13px] font-medium text-[var(--text-muted)]">—</span>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* LLM model indicator */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-[var(--text-muted)]">LLM:</span>
-        <span className="text-[13px] font-medium font-mono text-[var(--text)]">
-          {activeModel || '—'}
-        </span>
-      </div>
+      {/* LLM model indicator — only shown when agent publishes active_model */}
+      {activeModel && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-[var(--text-muted)]">LLM:</span>
+          <span className="text-[13px] font-medium font-mono text-[var(--text)]">
+            {activeModel}
+          </span>
+        </div>
+      )}
 
-      {/* Sentiment display */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-[var(--text-muted)]">Sentiment:</span>
-        <span className="text-[13px] font-medium text-[var(--text)]">
-          {sentiment
-            ? `${sentiment.emotion} ${sentiment.confidence.toFixed(2)}`
-            : '—'}
-        </span>
-      </div>
+      {/* Sentiment display — only shown when agent publishes sentiment_data */}
+      {sentiment && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-[var(--text-muted)]">Sentiment:</span>
+          <span className="text-[13px] font-medium text-[var(--text)]">
+            {sentiment.emotion} {sentiment.confidence.toFixed(2)}
+          </span>
+        </div>
+      )}
 
-      {/* Timer */}
+      {/* Timer — always shown */}
       <div className="ml-auto font-mono text-[13px] font-medium text-[var(--text)] tabular-nums">
         {timer}
       </div>
