@@ -22,6 +22,16 @@ function getLiveKitCredentials(agentId: string): { apiKey: string; apiSecret: st
       apiSecret: process.env.LIVEKIT_API_SECRET_LOVEBIRDS!,
       url: process.env.LIVEKIT_URL_LOVEBIRDS!,
     };
+    case 'jrvs': return {
+      apiKey: process.env.LIVEKIT_API_KEY_JRVS!,
+      apiSecret: process.env.LIVEKIT_API_SECRET_JRVS!,
+      url: process.env.LIVEKIT_URL_JRVS!,
+    };
+    case 'pack': return {
+      apiKey: process.env.LIVEKIT_API_KEY_PACK!,
+      apiSecret: process.env.LIVEKIT_API_SECRET_PACK!,
+      url: process.env.LIVEKIT_URL_PACK!,
+    };
     default: return undefined;
   }
 }

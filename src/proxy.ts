@@ -8,6 +8,8 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith('/minka')) agentId = 'minka';
   else if (pathname.startsWith('/coaching')) agentId = 'coaching';
   else if (pathname.startsWith('/lovebirds')) agentId = 'lovebirds';
+  else if (pathname.startsWith('/jrvs')) agentId = 'jrvs';
+  else if (pathname.startsWith('/pack')) agentId = 'pack';
 
   if (agentId) {
     const cookie = request.cookies.get(`prmpt_access_${agentId}`);
@@ -24,5 +26,7 @@ export const config = {
     '/minka/:path*',
     '/coaching/:path*',
     '/lovebirds/:path*',
+    '/jrvs/:path*',
+    '/pack/:path*',
   ],
 };
