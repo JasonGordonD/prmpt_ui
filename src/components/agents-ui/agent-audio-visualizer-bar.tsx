@@ -1,58 +1,226 @@
 'use client';
 
-import { useRef, useEffect, useMemo } from 'react';
-import { useTrackVolume } from '@livekit/components-react';
-import type { TrackReference } from '@livekit/components-core';
+import React, {
+  type CSSProperties,
+  Children,
+  type ComponentProps,
+  type ReactNode,
+  cloneElement,
+  isValidElement,
+  useMemo,
+} from 'react';
+import { type VariantProps, cva } from 'class-variance-authority';
+import { type LocalAudioTrack, type RemoteAudioTrack } from 'livekit-client';
+import {
+  type AgentState,
+  type TrackReferenceOrPlaceholder,
+  useMultibandTrackVolume,
+} from '@livekit/components-react';
+import { useAgentAudioVisualizerBarAnimator } from '@/hooks/agents-ui/use-agent-audio-visualizer-bar';
+import { cn } from '@/lib/utils';
 
-type Props = {
-  color?: string;
-  state?: string;
-  audioTrack?: TrackReference;
-  className?: string;
-  barCount?: number;
-};
-
-function hexToRgb(hex: string): [number, number, number] {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-    : [128, 128, 128];
+function cloneSingleChild(
+  children: ReactNode | ReactNode[],
+  props?: Record<string, unknown>,
+  key?: unknown,
+) {
+  return Children.map(children, (child) => {
+    // Checking isValidElement is the safe way and avoids a typescript error too.
+    if (isValidElement(child) && Children.only(children)) {
+      const childProps = child.props as Record<string, unknown>;
+      if (childProps.className) {
+        // make sure we retain classnames of both passed props and child
+        props ??= {};
+        props.className = cn(childProps.className as string, props.className as string);
+        props.style = {
+          ...(childProps.style as CSSProperties),
+          ...(props.style as CSSProperties),
+        };
+      }
+      return cloneElement(child, { ...props, key: key ? String(key) : undefined });
+    }
+    return child;
+  });
 }
 
-export function AgentAudioVisualizerBar({ color = '#888', state = 'idle', audioTrack, className = '', barCount = 24 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef = useRef<number>(0);
-  const rgb = useMemo(() => hexToRgb(color), [color]);
-  const volume = useTrackVolume(audioTrack);
+export const AgentAudioVisualizerBarElementVariants = cva(
+  [
+    'rounded-full transition-colors duration-250 ease-linear',
+    'bg-current/10 data-[lk-highlighted=true]:bg-current',
+  ],
+  {
+    variants: {
+      size: {
+        icon: 'w-[4px] min-h-[4px]',
+        sm: 'w-[8px] min-h-[8px]',
+        md: 'w-[16px] min-h-[16px]',
+        lg: 'w-[32px] min-h-[32px]',
+        xl: 'w-[64px] min-h-[64px]',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  },
+);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const w = 300, h = 150;
-    canvas.width = w;
-    canvas.height = h;
-    let t = 0;
-    const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
+export const AgentAudioVisualizerBarVariants = cva('relative flex items-center justify-center', {
+  variants: {
+    size: {
+      icon: 'h-[24px] gap-[2px]',
+      sm: 'h-[56px] gap-[4px]',
+      md: 'h-[112px] gap-[8px]',
+      lg: 'h-[224px] gap-[16px]',
+      xl: 'h-[448px] gap-[32px]',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
 
-    const draw = () => {
-      t += 0.05;
-      const intensity = volume > 0 ? Math.max(baseIntensity, volume * 2) : baseIntensity;
-      ctx.clearRect(0, 0, w, h);
-      const barW = (w / barCount) * 0.7;
-      const gap = w / barCount;
-      for (let i = 0; i < barCount; i++) {
-        const barH = (Math.sin(t + i * 0.3) * 0.5 + 0.5) * h * 0.8 * intensity + 4;
-        const alpha = 0.5 + (Math.sin(t + i * 0.2) * 0.3) * intensity;
-        ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
-        ctx.fillRect(i * gap + gap * 0.15, h - barH, barW, barH);
-      }
-      animRef.current = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state, barCount, volume]);
+/**
+ * Props for the AgentAudioVisualizerBar component.
+ */
+export interface AgentAudioVisualizerBarProps {
+  /**
+   * The size of the visualizer.
+   * @defaultValue 'md'
+   */
+  size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl';
+  /**
+   * The current state of the agent. Determines the animation pattern.
+   * @defaultValue 'connecting'
+   */
+  state?: AgentState;
+  /**
+   * The color of the bars in hexidecimal format.
+   */
+  color?: `#${string}`;
+  /**
+   * The number of bars to display in the visualizer.
+   * If not provided, defaults based on size: 3 for 'icon'/'sm', 5 for others.
+   */
+  barCount?: number;
+  /**
+   * The audio track to visualize. Can be a local/remote audio track or a track reference.
+   */
+  audioTrack?: LocalAudioTrack | RemoteAudioTrack | TrackReferenceOrPlaceholder;
+  /**
+   * Additional CSS class names to apply to the container.
+   */
+  className?: string;
+  /**
+   * Custom div element to render as grid cells. Each child receives data-lk-index,
+   * data-lk-highlighted props and style props for height. Must be a single div element.
+   */
+  children?: ReactNode;
+}
 
-  return <canvas ref={canvasRef} className={`w-full max-w-none h-full ${className}`} />;
+/**
+ * A bar-style audio visualizer that responds to agent state and audio levels.
+ * Displays animated bars that react to the current agent state (connecting, thinking, speaking, etc.)
+ * and audio volume when speaking.
+ *
+ * @extends ComponentProps<'div'>
+ *
+ * @example
+ * ```tsx
+ * <AgentAudioVisualizerBar
+ *   size="md"
+ *   state="speaking"
+ *   audioTrack={agentAudioTrack}
+ * />
+ * ```
+ */
+export function AgentAudioVisualizerBar({
+  size = 'md',
+  state = 'connecting',
+  color,
+  barCount,
+  audioTrack,
+  className,
+  children,
+  style,
+  ...props
+}: AgentAudioVisualizerBarProps &
+  VariantProps<typeof AgentAudioVisualizerBarVariants> &
+  ComponentProps<'div'>) {
+  const _barCount = useMemo(() => {
+    if (barCount) {
+      return barCount;
+    }
+    switch (size) {
+      case 'icon':
+      case 'sm':
+        return 3;
+      default:
+        return 5;
+    }
+  }, [barCount, size]);
+
+  const volumeBands = useMultibandTrackVolume(audioTrack, {
+    bands: _barCount,
+    loPass: 100,
+    hiPass: 200,
+  });
+
+  const sequencerInterval = useMemo(() => {
+    switch (state) {
+      case 'connecting':
+        return 2000 / _barCount;
+      case 'initializing':
+        return 2000;
+      case 'listening':
+        return 500;
+      case 'thinking':
+        return 150;
+      default:
+        return 1000;
+    }
+  }, [state, _barCount]);
+
+  const highlightedIndices = useAgentAudioVisualizerBarAnimator(
+    state,
+    _barCount,
+    sequencerInterval,
+  );
+
+  const bands = useMemo(
+    () => (state === 'speaking' ? volumeBands : new Array(_barCount).fill(0)),
+    [state, volumeBands, _barCount],
+  );
+
+  if (children && Array.isArray(children)) {
+    throw new Error('AgentAudioVisualizerBar children must be a single element.');
+  }
+
+  return (
+    <div
+      data-lk-state={state}
+      style={{ ...style, color } as CSSProperties}
+      className={cn(AgentAudioVisualizerBarVariants({ size }), className)}
+      {...props}
+    >
+      {bands.map((band: number, idx: number) =>
+        children ? (
+          <React.Fragment key={idx}>
+            {cloneSingleChild(children, {
+              'data-lk-index': idx,
+              'data-lk-highlighted': highlightedIndices.includes(idx),
+              style: { height: `${band * 100}%` },
+            })}
+          </React.Fragment>
+        ) : (
+          <div
+            key={idx}
+            data-lk-index={idx}
+            data-lk-highlighted={highlightedIndices.includes(idx)}
+            style={{ height: `${band * 100}%` }}
+            className={cn(AgentAudioVisualizerBarElementVariants({ size }))}
+          />
+        ),
+      )}
+    </div>
+  );
 }

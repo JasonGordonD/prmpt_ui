@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { type VariantProps, cva } from 'class-variance-authority';
-import { LocalAudioTrack, LocalVideoTrack, Track } from 'livekit-client';
+import { LocalAudioTrack, LocalVideoTrack } from 'livekit-client';
 import {
   type TrackReferenceOrPlaceholder,
   useMaybeRoomContext,
@@ -37,6 +37,11 @@ const selectVariants = cva(
           'peer-data-[state=off]/track:bg-destructive/10',
           'peer-data-[state=off]/track:hover:bg-destructive/15',
           'peer-data-[state=off]/track:[&_svg]:text-destructive!',
+
+          'dark:peer-data-[state=on]/track:bg-accent',
+          'dark:peer-data-[state=on]/track:hover:bg-foreground/10',
+          'dark:peer-data-[state=off]/track:bg-destructive/10',
+          'dark:peer-data-[state=off]/track:hover:bg-destructive/15',
         ],
         outline: [
           'border border-l-0',
@@ -45,6 +50,11 @@ const selectVariants = cva(
           'peer-data-[state=off]/track:hover:bg-destructive/15',
           'peer-data-[state=off]/track:[&_svg]:text-destructive!',
           'peer-data-[state=on]/track:hover:border-foreground/12',
+
+          'dark:peer-data-[state=off]/track:bg-destructive/10',
+          'dark:peer-data-[state=off]/track:hover:bg-destructive/15',
+          'dark:peer-data-[state=on]/track:bg-accent',
+          'dark:peer-data-[state=on]/track:hover:bg-foreground/10',
         ],
       },
       size: {
@@ -59,18 +69,61 @@ const selectVariants = cva(
   },
 );
 
+/**
+ * Props for the TrackDeviceSelect component. */
 type TrackDeviceSelectProps = React.ComponentProps<typeof SelectTrigger> &
   VariantProps<typeof selectVariants> & {
+    /**
+     * The size of the select.
+     * @defaultValue 'default'
+     */
     size?: 'default' | 'sm';
+    /**
+     * The variant of the select.
+     * @defaultValue 'default'
+     */
     variant?: 'default' | 'outline' | null;
+    /**
+     * The type of media device (audioinput or videoinput).
+     */
     kind: MediaDeviceKind;
+    /**
+     * The track source to control (Microphone, Camera, or ScreenShare).
+     */
     track?: LocalAudioTrack | LocalVideoTrack | undefined;
+    /**
+     * Whether to request permissions for the media device.
+     */
     requestPermissions?: boolean;
+    /**
+     * Callback when a media device error occurs.
+     */
     onMediaDeviceError?: (error: Error) => void;
+    /**
+     * Callback when the device list changes.
+     */
     onDeviceListChange?: (devices: MediaDeviceInfo[]) => void;
+    /**
+     * Callback when the active device changes.
+     */
     onActiveDeviceChange?: (deviceId: string) => void;
   };
 
+/**
+ * A select component for selecting a media device.
+ *
+ * @extends ComponentProps<'button'>
+ *
+ * @example
+ * ```tsx
+ * <TrackDeviceSelect
+ *   size="sm"
+ *   variant="outline"
+ *   kind="audioinput"
+ *   track={micTrackRef}
+ * />
+ * ```
+ */
 function TrackDeviceSelect({
   kind,
   track,
@@ -98,9 +151,9 @@ function TrackDeviceSelect({
     onDeviceListChange?.(devices);
   }, [devices, onDeviceListChange]);
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (nextOpen) {
+  const handleOpenChange = (open: boolean) => {
+    setOpen(open);
+    if (open) {
       setRequestPermissionsState(true);
     }
   };
@@ -112,7 +165,9 @@ function TrackDeviceSelect({
 
   const filteredDevices = useMemo(() => devices.filter((d) => d.deviceId !== ''), [devices]);
 
-  if (filteredDevices.length < 2) return null;
+  if (filteredDevices.length < 2) {
+    return null;
+  }
 
   return (
     <Select
@@ -137,19 +192,69 @@ function TrackDeviceSelect({
   );
 }
 
+/**
+ * Props for the AgentTrackControl component.
+ */
 export type AgentTrackControlProps = VariantProps<typeof toggleVariants> & {
+  /**
+   * The type of media device (audioinput or videoinput).
+   */
   kind: MediaDeviceKind;
-  source: Track.Source;
+  /**
+   * The track source to control (Microphone, Camera, or ScreenShare).
+   */
+  source: 'camera' | 'microphone' | 'screen_share';
+  /**
+   * Whether the track is currently enabled/published.
+   */
   pressed?: boolean;
+  /**
+   * Whether the control is in a pending/loading state.
+   */
   pending?: boolean;
+  /**
+   * Whether the control is disabled.
+   */
   disabled?: boolean;
+  /**
+   * Additional CSS class names to apply to the container.
+   */
   className?: string;
+  /**
+   * The audio track reference for visualization (only for microphone).
+   */
   audioTrack?: TrackReferenceOrPlaceholder;
+  /**
+   * Callback when the pressed state changes.
+   */
   onPressedChange?: (pressed: boolean) => void;
+  /**
+   * Callback when a media device error occurs.
+   */
   onMediaDeviceError?: (error: Error) => void;
+  /**
+   * Callback when the active device changes.
+   */
   onActiveDeviceChange?: (deviceId: string) => void;
 };
 
+/**
+ * A combined track toggle and device selector control.
+ * Includes a toggle button and a dropdown to select the active device.
+ * For microphone tracks, displays an audio visualizer.
+ *
+ * @example
+ * ```tsx
+ * <AgentTrackControl
+ *   kind="audioinput"
+ *   source={Track.Source.Microphone}
+ *   pressed={isMicEnabled}
+ *   audioTrack={micTrackRef}
+ *   onPressedChange={(pressed) => setMicEnabled(pressed)}
+ *   onActiveDeviceChange={(deviceId) => setMicDevice(deviceId)}
+ * />
+ * ```
+ */
 export function AgentTrackControl({
   kind,
   variant = 'default',
@@ -178,15 +283,24 @@ export function AgentTrackControl({
         pending={pending}
         disabled={disabled}
         onPressedChange={onPressedChange}
-        className="peer/track group/track focus:z-10 has-[~_button]:rounded-r-none has-[~_button]:border-r-0 has-[~_button]:pr-2 has-[~_button]:pl-3"
+        className="peer/track group/track focus:z-10 has-[.audiovisualizer]:w-auto has-[.audiovisualizer]:px-3 has-[~_button]:rounded-r-none has-[~_button]:border-r-0 has-[~_button]:pr-2 has-[~_button]:pl-3"
       >
         {audioTrack && (
           <AgentAudioVisualizerBar
+            size="icon"
             barCount={3}
             state={pressed ? 'speaking' : 'disconnected'}
-            audioTrack={pressed ? (audioTrack as never) : undefined}
-            className="audiovisualizer ml-1 h-3 w-5 shrink-0"
-          />
+            audioTrack={pressed ? audioTrack : undefined}
+            className="audiovisualizer flex h-6 w-auto items-center justify-center gap-0.5"
+          >
+            <span
+              className={cn([
+                'h-full min-h-0.5 w-0.5 origin-center',
+                'group-data-[state=on]/track:bg-foreground group-data-[state=off]/track:bg-destructive',
+                'data-lk-muted:bg-muted',
+              ])}
+            />
+          </AgentAudioVisualizerBar>
         )}
       </AgentTrackToggle>
       {kind && (

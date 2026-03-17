@@ -66,7 +66,7 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
       <div className="relative flex h-screen items-center justify-center overflow-hidden">
         <ReactShaderToy
           fs={PRECONNECT_SHADER}
-          uniforms={{ iAudioAmplitude: 0.05 }}
+          uniforms={{ iAudioAmplitude: { type: '1f', value: 0.05 } }}
           className="absolute inset-0 h-full w-full"
         />
 

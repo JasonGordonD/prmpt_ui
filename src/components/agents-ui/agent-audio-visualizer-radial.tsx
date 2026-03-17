@@ -1,79 +1,214 @@
 'use client';
 
-import { useRef, useEffect, useMemo } from 'react';
-import { useTrackVolume } from '@livekit/components-react';
-import type { TrackReference } from '@livekit/components-core';
+import { type ComponentProps, type CSSProperties, useMemo } from 'react';
+import { type VariantProps, cva } from 'class-variance-authority';
+import { type LocalAudioTrack, type RemoteAudioTrack } from 'livekit-client';
+import {
+  type AgentState,
+  type TrackReferenceOrPlaceholder,
+  useMultibandTrackVolume,
+} from '@livekit/components-react';
+import { cn } from '@/lib/utils';
+import { useAgentAudioVisualizerRadialAnimator } from '@/hooks/agents-ui/use-agent-audio-visualizer-radial';
 
-type Props = {
-  color?: string;
-  state?: string;
-  audioTrack?: TrackReference;
-  className?: string;
-  barCount?: number;
+export const AgentAudioVisualizerRadialVariants = cva(
+  [
+    'relative flex items-center justify-center',
+    '**:data-lk-index:bg-current/10',
+    '**:data-lk-index:absolute **:data-lk-index:top-1/2 **:data-lk-index:left-1/2 **:data-lk-index:origin-bottom **:data-lk-index:-translate-x-1/2',
+    '**:data-lk-index:rounded-full **:data-lk-index:transition-colors **:data-lk-index:duration-150 **:data-lk-index:ease-linear **:data-lk-index:data-[lk-highlighted=true]:bg-current',
+    'has-data-[lk-state=connecting]:**:data-lk-index:duration-300',
+    'has-data-[lk-state=initializing]:**:data-lk-index:duration-300',
+    'has-data-[lk-state=listening]:**:data-lk-index:duration-300',
+    'has-data-[lk-state=thinking]:animate-spin has-data-[lk-state=thinking]:[animation-duration:5s] has-data-[lk-state=thinking]:**:data-lk-index:bg-current',
+  ],
+  {
+    variants: {
+      size: {
+        icon: ['h-[24px] gap-[2px]'],
+        sm: ['h-[56px] gap-[4px]'],
+        md: ['h-[112px] gap-[8px]'],
+        lg: ['h-[224px] gap-[16px]'],
+        xl: ['h-[448px] gap-[32px]'],
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+    },
+  },
+);
+
+/**
+ * Props for the AgentAudioVisualizerRadial component.
+ */
+export interface AgentAudioVisualizerRadialProps {
+  /**
+   * The size of the visualizer.
+   * @defaultValue 'md'
+   */
+  size?: 'icon' | 'sm' | 'md' | 'lg' | 'xl';
+  /**
+   * The current state of the agent. Determines the animation pattern.
+   * @defaultValue 'connecting'
+   */
+  state?: AgentState;
+  /**
+   * The color of the radial bars in hexidecimal format.
+   */
+  color?: `#${string}`;
+  /**
+   * The radius (distance from center) for the radial bars.
+   * If not provided, defaults based on size.
+   */
   radius?: number;
-};
-
-function hexToRgb(hex: string): [number, number, number] {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-    : [128, 128, 128];
+  /**
+   * The number of bars to display around the circle.
+   * Should be divisible by 4 for optimal visual results.
+   * If not provided, defaults to 12 for 'icon'/'sm', 24 for others.
+   */
+  barCount?: number;
+  /**
+   * The audio track to visualize. Can be a local/remote audio track or a track reference.
+   */
+  audioTrack?: LocalAudioTrack | RemoteAudioTrack | TrackReferenceOrPlaceholder;
+  /**
+   * Additional CSS class names to apply to the container.
+   */
+  className?: string;
 }
 
+/**
+ * A radial (circular) audio visualizer that responds to agent state and audio levels.
+ * Displays animated bars arranged in a circle that react to the current agent state
+ * and audio volume when speaking.
+ *
+ * @extends ComponentProps<'div'>
+ *
+ * @example
+ * ```tsx
+ * <AgentAudioVisualizerRadial
+ *   size="lg"
+ *   state="speaking"
+ *   barCount={24}
+ *   audioTrack={agentAudioTrack}
+ * />
+ * ```
+ */
 export function AgentAudioVisualizerRadial({
-  color = '#888',
-  state = 'idle',
+  size = 'md',
+  state = 'connecting',
+  color,
+  radius,
+  barCount,
   audioTrack,
-  className = '',
-  barCount = 32,
-  radius = 50,
-}: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef = useRef<number>(0);
-  const rgb = useMemo(() => hexToRgb(color), [color]);
-  const volume = useTrackVolume(audioTrack);
+  className,
+  style,
+  ...props
+}: AgentAudioVisualizerRadialProps &
+  ComponentProps<'div'> &
+  VariantProps<typeof AgentAudioVisualizerRadialVariants>) {
+  const _barCount = useMemo(() => {
+    if (barCount) {
+      return barCount;
+    }
+    switch (size) {
+      case 'icon':
+      case 'sm':
+        return 12;
+      default:
+        return 24;
+    }
+  }, [barCount, size]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dim = 200;
-    canvas.width = dim;
-    canvas.height = dim;
-    let t = 0;
-    const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
-    const segCount = barCount;
+  const volumeBands = useMultibandTrackVolume(audioTrack, {
+    bands: _barCount,
+    loPass: 100,
+    hiPass: 200,
+  });
 
-    const draw = () => {
-      t += 0.03;
-      const intensity = volume > 0 ? Math.max(baseIntensity, volume * 2) : baseIntensity;
-      ctx.clearRect(0, 0, dim, dim);
-      const cx = dim / 2;
-      const cy = dim / 2;
-      const baseR = radius;
+  const sequencerInterval = useMemo(() => {
+    switch (state) {
+      case 'connecting':
+      case 'listening':
+        return 500;
+      case 'initializing':
+        return 250;
+      case 'thinking':
+        return Infinity;
+      default:
+        return 1000;
+    }
+  }, [state, _barCount]);
 
-      for (let i = 0; i < segCount; i++) {
-        const angle = (i / segCount) * Math.PI * 2;
-        const len = (Math.sin(t * 2 + i * 0.5) * 0.5 + 0.5) * dim * 0.15 * intensity + 4;
-        const x1 = cx + Math.cos(angle) * baseR;
-        const y1 = cy + Math.sin(angle) * baseR;
-        const x2 = cx + Math.cos(angle) * (baseR + len);
-        const y2 = cy + Math.sin(angle) * (baseR + len);
+  const distanceFromCenter = useMemo(() => {
+    if (radius) {
+      return radius;
+    }
+    switch (size) {
+      case 'icon':
+        return 6;
+      case 'xl':
+        return 128;
+      case 'lg':
+        return 64;
+      case 'sm':
+        return 16;
+      case 'md':
+      default:
+        return 32;
+    }
+  }, [size, radius]);
 
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${0.6 + Math.sin(t + i) * 0.2})`;
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-      }
-      animRef.current = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state, volume, barCount, radius]);
+  if (_barCount % 4 !== 0) {
+    console.warn('barCount should be divisible by 4 for optimal visual results');
+  }
 
-  return <canvas ref={canvasRef} className={`rounded-full ${className}`} style={{ width: 200, height: 200 }} />;
+  const highlightedIndices = useAgentAudioVisualizerRadialAnimator(
+    state,
+    _barCount,
+    sequencerInterval,
+  );
+  const bands = useMemo(
+    () => (audioTrack ? volumeBands : new Array(_barCount).fill(0)),
+    [audioTrack, volumeBands, _barCount],
+  );
+
+  const dotSize = useMemo(() => {
+    return (distanceFromCenter * Math.PI) / _barCount;
+  }, [distanceFromCenter, _barCount]);
+
+  return (
+    <div
+      data-lk-state={state}
+      className={cn(AgentAudioVisualizerRadialVariants({ size }), 'relative', className)}
+      style={{ ...style, color } as CSSProperties}
+      {...props}
+    >
+      {bands.map((band, idx) => {
+        const angle = (idx / _barCount) * Math.PI * 2;
+
+        return (
+          <div
+            key={`${_barCount}-${idx}`}
+            data-lk-state={state}
+            className="absolute top-1/2 left-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2"
+            style={{
+              transformOrigin: 'center',
+              transform: `rotate(${angle}rad) translateY(${distanceFromCenter}px)`,
+            }}
+          >
+            <div
+              data-lk-index={idx}
+              data-lk-highlighted={highlightedIndices.includes(idx)}
+              style={{
+                width: dotSize,
+                minHeight: dotSize,
+                height: state === 'speaking' ? `${dotSize * 10 * band}px` : 0,
+              }}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
 }

@@ -153,6 +153,8 @@ export interface AgentSessionView_01Props {
   audioVisualizerWaveLineWidth?: number;
   /** Optional class name merged onto the outer `<section>` container. */
   className?: string;
+  /** Optional disconnect handler overriding session.end */
+  onDisconnect?: () => void;
 }
 
 export function AgentSessionView_01({
@@ -171,6 +173,7 @@ export function AgentSessionView_01({
   audioVisualizerRadialBarCount,
   audioVisualizerRadialRadius,
   audioVisualizerWaveLineWidth,
+  onDisconnect,
   ref,
   className,
   ...props
@@ -264,7 +267,7 @@ export function AgentSessionView_01({
             controls={controls}
             isChatOpen={chatOpen}
             isConnected={session.isConnected}
-            onDisconnect={session.end}
+            onDisconnect={onDisconnect ?? session.end}
             onIsChatOpenChange={setChatOpen}
           />
         </div>

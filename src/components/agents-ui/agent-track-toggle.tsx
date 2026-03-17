@@ -44,7 +44,10 @@ export const agentTrackToggleVariants = cva(['size-9'], {
 });
 
 function getSourceIcon(source: Track.Source, enabled: boolean, pending = false) {
-  if (pending) return LoaderIcon;
+  if (pending) {
+    return LoaderIcon;
+  }
+
   switch (source) {
     case Track.Source.Microphone:
       return enabled ? MicIcon : MicOffIcon;
@@ -57,17 +60,61 @@ function getSourceIcon(source: Track.Source, enabled: boolean, pending = false) 
   }
 }
 
+/**
+ * Props for the AgentTrackToggle component.
+ */
 export type AgentTrackToggleProps = VariantProps<typeof agentTrackToggleVariants> &
   ComponentProps<'button'> & {
+    /**
+     * The size of the toggle.
+     */
     size?: 'sm' | 'default' | 'lg';
+    /**
+     * The variant of the toggle.
+     * @defaultValue 'default'
+     */
     variant?: 'default' | 'outline';
-    source: Track.Source;
+    /**
+     * The track source to toggle (Microphone, Camera, or ScreenShare).
+     */
+    source: 'camera' | 'microphone' | 'screen_share';
+    /**
+     * Whether the toggle is in a pending/loading state.
+     * When true, displays a loading spinner icon.
+     * @defaultValue false
+     */
     pending?: boolean;
+    /**
+     * Whether the toggle is currently pressed/enabled.
+     * @defaultValue false
+     */
     pressed?: boolean;
+    /**
+     * The default pressed state when uncontrolled.
+     * @defaultValue false
+     */
     defaultPressed?: boolean;
+    /**
+     * Callback fired when the pressed state changes.
+     */
     onPressedChange?: (pressed: boolean) => void;
   };
 
+/**
+ * A toggle button for controlling track publishing state.
+ * Displays appropriate icons based on the track source and state.
+ *
+ * @extends ComponentProps<'button'>
+ *
+ * @example
+ * ```tsx
+ * <AgentTrackToggle
+ *   source={Track.Source.Microphone}
+ *   pressed={isMicEnabled}
+ *   onPressedChange={(pressed) => setMicEnabled(pressed)}
+ * />
+ * ```
+ */
 export function AgentTrackToggle({
   size = 'default',
   variant = 'default',
@@ -85,9 +132,11 @@ export function AgentTrackToggle({
     () => (isControlled ? pressed : uncontrolledPressed) ?? false,
     [isControlled, pressed, uncontrolledPressed],
   );
-  const IconComponent = getSourceIcon(source, resolvedPressed, pending);
+  const IconComponent = getSourceIcon(source as Track.Source, resolvedPressed, pending);
   const handlePressedChange = (nextPressed: boolean) => {
-    if (!isControlled) setUncontrolledPressed(nextPressed);
+    if (!isControlled) {
+      setUncontrolledPressed(nextPressed);
+    }
     onPressedChange?.(nextPressed);
   };
 
@@ -99,7 +148,13 @@ export function AgentTrackToggle({
       defaultPressed={isControlled ? undefined : defaultPressed}
       aria-label={`Toggle ${source}`}
       onPressedChange={handlePressedChange}
-      className={cn(agentTrackToggleVariants({ size, variant: variant ?? 'default', className }))}
+      className={cn(
+        agentTrackToggleVariants({
+          size,
+          variant: variant ?? 'default',
+          className,
+        }),
+      )}
       {...props}
     >
       <IconComponent className={cn(pending && 'animate-spin')} />

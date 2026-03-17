@@ -9,6 +9,7 @@ import {
 } from '@livekit/components-react';
 
 const trackSourceToProtocol = (source: Track.Source) => {
+  // NOTE: this mapping avoids importing the protocol package as that leads to a significant bundle size increase
   switch (source) {
     case Track.Source.Camera:
       return 1;
@@ -68,10 +69,9 @@ export function useInputControls({
   saveUserChoices = true,
   onDeviceError,
 }: UseInputControlsProps = {}): UseInputControlsReturn {
-  const session = useSessionContext();
   const {
     local: { microphoneTrack },
-  } = session;
+  } = useSessionContext();
 
   const microphoneToggle = useTrackToggle({
     source: Track.Source.Microphone,
@@ -115,6 +115,7 @@ export function useInputControls({
         screenShareToggle.toggle(false);
       }
       await cameraToggle.toggle(enabled);
+      // persist video input enabled preference
       saveVideoInputEnabled(!cameraToggle.enabled);
     },
     [cameraToggle, screenShareToggle, saveVideoInputEnabled],
@@ -123,6 +124,7 @@ export function useInputControls({
   const handleToggleMicrophone = useCallback(
     async (enabled?: boolean) => {
       await microphoneToggle.toggle(enabled);
+      // persist audio input enabled preference
       saveAudioInputEnabled(!microphoneToggle.enabled);
     },
     [microphoneToggle, saveAudioInputEnabled],
@@ -130,39 +132,13 @@ export function useInputControls({
 
   const handleToggleScreenShare = useCallback(
     async (enabled?: boolean) => {
-      const targetEnabled = typeof enabled === 'boolean' ? enabled : !screenShareToggle.enabled;
-
-      if (targetEnabled && cameraToggle.enabled) {
-        await cameraToggle.toggle(false);
+      if (cameraToggle.enabled) {
+        cameraToggle.toggle(false);
       }
-
-      const room = session.room;
-      if (!room) {
-        await screenShareToggle.toggle(targetEnabled);
-        return;
-      }
-
-      if (!targetEnabled) {
-        await room.localParticipant.setScreenShareEnabled(false);
-        return;
-      }
-
-      try {
-        // Request tab/system audio when available so screenshare can include browser audio.
-        await room.localParticipant.setScreenShareEnabled(true, {
-          audio: true,
-          systemAudio: 'include',
-          preferCurrentTab: true,
-          surfaceSwitching: 'include',
-        });
-      } catch {
-        // Fallback to default screenshare capture on browsers that reject audio options.
-        await room.localParticipant.setScreenShareEnabled(true);
-      }
+      await screenShareToggle.toggle(enabled);
     },
-    [cameraToggle, screenShareToggle, session],
+    [cameraToggle, screenShareToggle],
   );
-
   const handleMicrophoneDeviceSelectError = useCallback(
     (error: Error) => onDeviceError?.({ source: Track.Source.Microphone, error }),
     [onDeviceError],

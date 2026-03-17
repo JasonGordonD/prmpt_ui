@@ -1,18 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Track } from 'livekit-client';
-import { VideoTrack, useSessionContext, useSessionMessages, useTracks, useVoiceAssistant } from '@livekit/components-react';
+import { useSessionContext } from '@livekit/components-react';
 import type { AgentConfig } from '@/lib/agents';
-import { StatusBar } from '@/components/shared/status-bar';
-import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
-import { AgentControlBar, type AgentControlBarControls } from '@/components/agents-ui/agent-control-bar';
-import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura';
-import { AgentAudioVisualizerBar } from '@/components/agents-ui/agent-audio-visualizer-bar';
-import { AgentAudioVisualizerGrid } from '@/components/agents-ui/agent-audio-visualizer-grid';
-import { AgentAudioVisualizerRadial } from '@/components/agents-ui/agent-audio-visualizer-radial';
-import { AgentAudioVisualizerWave } from '@/components/agents-ui/agent-audio-visualizer-wave';
-import { useRealtimeMediaData } from '@/hooks/agents-ui/use-realtime-media-data';
+import { cn } from '@/lib/utils';
+import { AgentSessionView_01 } from '@/components/agents-ui/blocks/agent-session-view-01';
 
 type AgentSessionViewProps = {
   agentConfig: AgentConfig;
@@ -51,28 +42,13 @@ export function AgentSessionView({
   audioVisualizerRadialBarCount = 32,
   audioVisualizerRadialRadius = 50,
   audioVisualizerWaveLineWidth = 2,
-  controlsVariant = 'outline',
+  controlsVariant = 'livekit',
   className = '',
   onLeave,
 }: AgentSessionViewProps) {
-  const { audioTrack: agentAudioTrack, state: assistantState } = useVoiceAssistant();
-  const [screenShareTrack] = useTracks([Track.Source.ScreenShare]);
   const session = useSessionContext();
-  const { messages } = useSessionMessages(session);
-  const [chatOpen, setChatOpen] = useState(true);
-  const [optimisticImages, setOptimisticImages] = useState<string[]>([]);
-  const [uploadToast, setUploadToast] = useState('');
-  const visualizerColor = audioVisualizerColor ?? agentConfig.theme.auraColor;
+  const visualizerColor = audioVisualizerColor ?? (agentConfig.theme.auraColor as `#${string}`);
   const visualizerColorShift = audioVisualizerColorShift ?? agentConfig.theme.auraColorShift;
-  const { incomingByteStreams } = useRealtimeMediaData({ chatOpen });
-
-  const controls = useMemo<AgentControlBarControls>(() => ({
-    microphone: true,
-    camera: supportsVideoInput,
-    screenShare: supportsScreenShare,
-    chat: supportsChatInput,
-    leave: true,
-  }), [supportsVideoInput, supportsScreenShare, supportsChatInput]);
 
   const handleDisconnect = async () => {
     if (onLeave) {
@@ -82,143 +58,30 @@ export function AgentSessionView({
     await session.end();
   };
 
-  const handleFileUpload = async (file: File) => {
-    const room = session.room;
-    if (!room) return;
-    await room.localParticipant.sendFile(file, { topic: 'images' });
-    const objectUrl = URL.createObjectURL(file);
-    setOptimisticImages((images) => [...images, objectUrl]);
-    setUploadToast(`SENT TO ${agentConfig.displayName.toUpperCase()}`);
-    window.setTimeout(() => {
-      setUploadToast('');
-    }, 2000);
-  };
-
-  useEffect(() => {
-    return () => {
-      optimisticImages.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [optimisticImages]);
-
-  const renderAudioVisualizer = () => {
-    if (audioVisualizerType === 'aura') {
-      return (
-        <AgentAudioVisualizerAura
-          audioTrack={agentAudioTrack}
-          state={assistantState}
-          color={visualizerColor}
-          colorShift={visualizerColorShift}
-          size="xl"
-          className="w-full h-full"
-        />
-      );
-    }
-
-    if (audioVisualizerType === 'wave') {
-      return (
-        <AgentAudioVisualizerWave
-          audioTrack={agentAudioTrack}
-          state={assistantState}
-          color={visualizerColor}
-          lineWidth={audioVisualizerWaveLineWidth}
-          className="w-full h-full"
-        />
-      );
-    }
-
-    if (audioVisualizerType === 'grid') {
-      return (
-        <AgentAudioVisualizerGrid
-          audioTrack={agentAudioTrack}
-          state={assistantState}
-          color={visualizerColor}
-          rowCount={audioVisualizerGridRowCount}
-          columnCount={audioVisualizerGridColumnCount}
-          className="w-full h-full"
-        />
-      );
-    }
-
-    if (audioVisualizerType === 'radial') {
-      return (
-        <AgentAudioVisualizerRadial
-          audioTrack={agentAudioTrack}
-          state={assistantState}
-          color={visualizerColor}
-          barCount={audioVisualizerRadialBarCount}
-          radius={audioVisualizerRadialRadius}
-          className="w-full h-full"
-        />
-      );
-    }
-
-    return (
-      <AgentAudioVisualizerBar
-        audioTrack={agentAudioTrack}
-        state={assistantState}
-        color={visualizerColor}
-        barCount={audioVisualizerBarCount}
-        className="w-full h-full"
-      />
-    );
-  };
-
   return (
-    <div className={`session-shell relative flex h-screen flex-col overflow-hidden ${className}`}>
-      <div className="session-shell-overlay pointer-events-none absolute inset-0" />
-      <div className="relative z-10 flex h-full flex-col overflow-hidden">
-        <StatusBar agentConfig={agentConfig} />
-
-        <div className="session-visualizer flex h-[34vh] min-h-[180px] max-h-[300px] shrink-0 flex-col overflow-hidden border-b border-[var(--noir-border)]">
-          {screenShareTrack ? (
-            <div
-              className="h-full w-full"
-              style={{ border: '1px solid var(--noir-border-accent)' }}
-            >
-              <VideoTrack
-                trackRef={screenShareTrack}
-                className="h-full w-full object-contain"
-              />
-            </div>
-          ) : (
-            <div className="h-full w-full flex items-center justify-center">
-              {renderAudioVisualizer()}
-            </div>
-          )}
-        </div>
-
-        {supportsChatInput && chatOpen && (
-          <div className="session-transcript-pane min-h-0 flex-1 overflow-hidden">
-            <AgentChatTranscript
-              agentName={agentConfig.displayName}
-              optimisticImages={optimisticImages}
-              incomingByteStreams={incomingByteStreams}
-            />
-          </div>
-        )}
-
-        {isPreConnectBufferEnabled && messages.length === 0 && (
-          <div className="agent-preconnect-message shrink-0 px-4 pb-2 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)]">
-            {preConnectMessage}
-          </div>
-        )}
-
-        <AgentControlBar
-          variant={controlsVariant}
-          controls={controls}
-          isChatOpen={chatOpen}
-          isConnected={session.isConnected}
-          onIsChatOpenChange={setChatOpen}
-          onDisconnect={handleDisconnect}
-          onFileUpload={handleFileUpload}
-        />
-      </div>
-
-      {uploadToast && (
-        <div className="upload-toast">
-          {uploadToast}
-        </div>
+    <AgentSessionView_01
+      preConnectMessage={preConnectMessage}
+      isPreConnectBufferEnabled={isPreConnectBufferEnabled}
+      supportsChatInput={supportsChatInput}
+      supportsVideoInput={supportsVideoInput}
+      supportsScreenShare={supportsScreenShare}
+      audioVisualizerType={audioVisualizerType}
+      audioVisualizerColor={visualizerColor}
+      audioVisualizerColorShift={visualizerColorShift}
+      audioVisualizerBarCount={audioVisualizerBarCount}
+      audioVisualizerGridRowCount={audioVisualizerGridRowCount}
+      audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
+      audioVisualizerRadialBarCount={audioVisualizerRadialBarCount}
+      audioVisualizerRadialRadius={audioVisualizerRadialRadius}
+      audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
+      onDisconnect={() => {
+        void handleDisconnect();
+      }}
+      className={cn(
+        'session-shell h-screen',
+        controlsVariant === 'livekit' && '[&_button]:font-mono',
+        className,
       )}
-    </div>
+    />
   );
 }
