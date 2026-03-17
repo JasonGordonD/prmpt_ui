@@ -248,3 +248,42 @@ textarea:focus:not(:focus-visible) {
   transform-origin: bottom;
   animation: status-speaking-bars 700ms ease-in-out infinite;
 }
+
+.agent-control-bar {
+  background: var(--noir-bg-surface);
+  border-top: 1px solid var(--noir-border);
+  height: 64px;
+  padding: 0 24px;
+}
+
+.agent-control-btn {
+  color: var(--noir-text-muted);
+  background: transparent;
+  border: 1px solid var(--noir-border-mid);
+  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  transition: all 150ms ease;
+}
+
+.agent-control-bar button:hover {
+  color: var(--noir-text);
+  border-color: var(--noir-border-accent);
+  background: var(--noir-accent-glow);
+}
+
+.agent-control-bar button[data-active="true"] {
+  color: var(--noir-accent-bright);
+  border-color: var(--noir-accent);
+}
+
+.agent-control-bar [data-control="leave"] {
+  color: var(--noir-accent-bright);
+  border-color: var(--noir-accent);
+  background: transparent;
+}
+
+.agent-control-bar [data-control="leave"]:hover {
+  background: var(--noir-accent);
+  color: var(--noir-text);
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Track } from 'livekit-client';
 import { Camera, CameraOff, LogOut, MessageSquare, Mic, MicOff, Monitor, MonitorOff, Paperclip } from 'lucide-react';
 import { useSessionContext, useTrackToggle } from '@livekit/components-react';
@@ -24,7 +24,7 @@ type AgentControlBarProps = {
 };
 
 export function AgentControlBar({
-  variant = 'outline',
+  variant: _variant = 'outline',
   controls = {
     microphone: true,
     camera: false,
@@ -46,12 +46,7 @@ export function AgentControlBar({
   const { toggle: toggleCamera, enabled: cameraEnabled } = useTrackToggle({ source: Track.Source.Camera });
   const { toggle: toggleScreenShare, enabled: screenShareEnabled } = useTrackToggle({ source: Track.Source.ScreenShare });
 
-  const baseButtonClasses = useMemo(() => {
-    if (variant === 'livekit') {
-      return 'h-11 w-11 rounded-full border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]';
-    }
-    return 'h-11 w-11 rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]';
-  }, [variant]);
+  const baseButtonClasses = 'agent-control-btn h-11 w-11 rounded-lg';
 
   const handleDisconnect = async () => {
     if (onDisconnect) {
@@ -87,7 +82,7 @@ export function AgentControlBar({
   };
 
   return (
-    <div className={`agent-control-bar flex items-center justify-center gap-3 px-4 py-2 ${className}`}>
+    <div className={`agent-control-bar flex h-16 items-center justify-center gap-3 px-6 ${className}`}>
       <input
         ref={fileInputRef}
         type="file"
