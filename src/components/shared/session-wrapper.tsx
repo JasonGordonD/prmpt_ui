@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useState, Suspense } from 'react';
+import { useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TokenSource } from 'livekit-client';
 import {
@@ -73,25 +73,6 @@ function SessionConnector({
   const session = useSession(tokenSource, {
     agentConnectTimeoutMilliseconds: 30_000,
   });
-
-  const [started, setStarted] = useState(false);
-
-  const handleConnect = () => {
-    setStarted(true);
-    session.start().catch((err) => {
-      console.error('[SessionWrapper] Failed to start session:', err);
-    });
-  };
-
-  // Auto-start: try to start session automatically on mount.
-  // This works because the user already clicked "Start Session" on the landing page,
-  // which is a recent enough user gesture in most browsers.
-  useEffect(() => {
-    if (!started && session.connectionState === 'disconnected') {
-      handleConnect();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <SessionProvider session={session}>
