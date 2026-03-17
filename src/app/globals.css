@@ -353,6 +353,31 @@ textarea:focus:not(:focus-visible) {
     linear-gradient(180deg, rgba(20, 20, 30, 0.78) 0%, rgba(12, 12, 18, 0.88) 100%);
 }
 
+.session-chat-composer {
+  background: rgba(12, 12, 18, 0.95);
+}
+
+.session-chat-input {
+  background: var(--noir-bg-elevated);
+  border: 1px solid var(--noir-border-mid);
+  color: var(--noir-text);
+}
+
+.session-chat-input::placeholder {
+  color: var(--noir-text-dim);
+}
+
+.session-chat-send {
+  border: 1px solid var(--noir-border-accent);
+  color: var(--noir-accent-bright);
+  background: transparent;
+}
+
+.session-chat-send:hover {
+  background: var(--noir-accent-dim);
+  color: var(--noir-text);
+}
+
 .upload-preview {
   max-width: 220px;
   max-height: 160px;
