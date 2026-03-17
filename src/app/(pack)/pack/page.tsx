@@ -17,7 +17,6 @@ export default function PackPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: 'pack',
-          agentName: 'the-pack',
         }),
       });
       const data = await res.json();

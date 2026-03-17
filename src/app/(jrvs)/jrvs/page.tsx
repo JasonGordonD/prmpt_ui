@@ -17,7 +17,6 @@ export default function JrvsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: 'jrvs',
-          agentName: 'JRVS',
         }),
       });
       const data = await res.json();
