@@ -338,3 +338,29 @@ textarea:focus:not(:focus-visible) {
   z-index: 20;
   animation: fade-in-fast 0.2s ease-out;
 }
+
+.media-download-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--noir-bg-elevated);
+  opacity: 0;
+  transition: opacity 150ms ease;
+  cursor: pointer;
+}
+
+.transcript-image:hover .media-download-btn {
+  opacity: 1;
+}
+
+.media-video-download-link {
+  display: inline-block;
+  font-family: var(--font-mono-face), 'Courier Prime', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--noir-text-muted);
+}

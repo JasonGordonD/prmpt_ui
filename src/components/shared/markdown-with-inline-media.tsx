@@ -6,6 +6,7 @@ import { Children } from 'react';
 import type { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Download } from 'lucide-react';
 
 type InlineMediaType = 'none' | 'image' | 'video-file' | 'youtube' | 'vimeo';
 
@@ -159,12 +160,22 @@ function InlineMediaContent({
   if (media.type === 'image') {
     return (
       <div className="my-2 space-y-1.5">
-        <img
-          src={media.sourceUrl}
-          alt={alt || 'Inline image preview'}
-          loading="lazy"
-          className="max-h-80 w-auto max-w-full rounded-lg border border-[var(--border)] object-contain bg-black/10"
-        />
+        <div className="transcript-image relative inline-block">
+          <img
+            src={media.sourceUrl}
+            alt={alt || 'Inline image preview'}
+            loading="lazy"
+            className="max-h-80 w-auto max-w-full rounded-lg border border-[var(--border)] object-contain bg-black/10"
+          />
+          <a
+            href={media.sourceUrl}
+            download
+            className="media-download-btn flex items-center justify-center"
+            title="Download image"
+          >
+            <Download className="h-4 w-4 text-[var(--noir-text-muted)]" />
+          </a>
+        </div>
         <MediaSourceLink href={href} />
       </div>
     );
@@ -179,6 +190,13 @@ function InlineMediaContent({
           preload="metadata"
           className="max-h-96 w-full rounded-lg border border-[var(--border)] bg-black"
         />
+        <a
+          href={media.sourceUrl}
+          download
+          className="media-video-download-link"
+        >
+          Download video
+        </a>
         <MediaSourceLink href={href} />
       </div>
     );
