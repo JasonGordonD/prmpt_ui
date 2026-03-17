@@ -45,6 +45,25 @@ Each agent requires three LiveKit credentials and one access password.
 - `LIVEKIT_URL_PACK` *(preferred)* or `LIVEKIT_URL_THEPACK` *(legacy alias)*
 - `AGENT_PASSWORD_PACK` *(preferred)* or `AGENT_PASSWORD_THEPACK` *(legacy alias)*
 
+## LiveKit stream export/import API
+
+The app includes authenticated server routes for LiveKit media export/import (Egress + Ingress).
+
+- `GET /api/livekit/egress?agentId=<id>&roomName=<optional>&active=<optional>`
+  - List egress jobs for an agent/project.
+- `POST /api/livekit/egress`
+  - `action: "start_room_composite"`: start room recording/stream export.
+  - `action: "stop"`: stop an egress job by `egressId`.
+  - `action: "update_stream"`: add/remove RTMP output URLs for active stream egress.
+
+- `GET /api/livekit/ingress?agentId=<id>&roomName=<optional>&ingressId=<optional>`
+  - List ingress jobs for an agent/project.
+- `POST /api/livekit/ingress`
+  - `action: "create"`: create ingress (`inputType`: `rtmp` | `whip` | `url`).
+  - `action: "delete"`: delete ingress by `ingressId`.
+
+All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and use the same per-agent LiveKit credentials used by `/api/token`.
+
 ## Deployment checklist (Vercel)
 
 1. Add all required variables in Vercel Project Settings → Environment Variables.
