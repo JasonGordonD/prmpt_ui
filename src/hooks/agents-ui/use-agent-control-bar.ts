@@ -68,9 +68,10 @@ export function useInputControls({
   saveUserChoices = true,
   onDeviceError,
 }: UseInputControlsProps = {}): UseInputControlsReturn {
+  const session = useSessionContext();
   const {
     local: { microphoneTrack },
-  } = useSessionContext();
+  } = session;
 
   const microphoneToggle = useTrackToggle({
     source: Track.Source.Microphone,
@@ -129,12 +130,37 @@ export function useInputControls({
 
   const handleToggleScreenShare = useCallback(
     async (enabled?: boolean) => {
-      if (cameraToggle.enabled) {
-        cameraToggle.toggle(false);
+      const targetEnabled = typeof enabled === 'boolean' ? enabled : !screenShareToggle.enabled;
+
+      if (targetEnabled && cameraToggle.enabled) {
+        await cameraToggle.toggle(false);
       }
-      await screenShareToggle.toggle(enabled);
+
+      const room = session.room;
+      if (!room) {
+        await screenShareToggle.toggle(targetEnabled);
+        return;
+      }
+
+      if (!targetEnabled) {
+        await room.localParticipant.setScreenShareEnabled(false);
+        return;
+      }
+
+      try {
+        // Request tab/system audio when available so screenshare can include browser audio.
+        await room.localParticipant.setScreenShareEnabled(true, {
+          audio: true,
+          systemAudio: 'include',
+          preferCurrentTab: true,
+          surfaceSwitching: 'include',
+        });
+      } catch {
+        // Fallback to default screenshare capture on browsers that reject audio options.
+        await room.localParticipant.setScreenShareEnabled(true);
+      }
     },
-    [cameraToggle, screenShareToggle],
+    [cameraToggle, screenShareToggle, session],
   );
 
   const handleMicrophoneDeviceSelectError = useCallback(
