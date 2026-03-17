@@ -19,7 +19,7 @@ import {
 const MOTION_PROPS: MotionProps = {
   variants: {
     hidden: { height: 0, opacity: 0, marginBottom: 0 },
-    visible: { height: 'auto', opacity: 1, marginBottom: 12 },
+    visible: { height: 'auto', opacity: 1, marginBottom: 8 },
   },
   initial: 'hidden',
   transition: { duration: 0.2, ease: 'easeOut' },
@@ -49,7 +49,7 @@ function AgentChatInput({
   };
 
   return (
-    <div className="mb-3 flex grow items-end gap-2 rounded-md pl-1 text-sm">
+    <div className="mb-2 flex grow items-end gap-2 rounded-md pl-1 text-sm">
       <textarea
         autoFocus
         ref={inputRef}
@@ -63,7 +63,7 @@ function AgentChatInput({
           }
         }}
         onChange={(e) => setMessage(e.target.value)}
-        className="agent-control-chat-input field-sizing-content max-h-16 min-h-8 flex-1 resize-none py-2 [scrollbar-width:thin] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="agent-control-chat-input field-sizing-content max-h-14 min-h-9 flex-1 resize-none py-2 [scrollbar-width:thin] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       />
       <button
         type="button"
@@ -163,8 +163,8 @@ export function AgentControlBar({
         />
       </motion.div>
 
-      <div className="flex gap-1">
-        <div className="flex grow gap-1">
+      <div className="flex items-center gap-1">
+        <div className="flex grow items-center gap-1">
           {visibleControls.microphone && (
             <AgentTrackControl
               variant={variant === 'outline' ? 'outline' : 'default'}

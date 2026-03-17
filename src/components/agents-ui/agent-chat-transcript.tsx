@@ -37,7 +37,7 @@ export function AgentChatTranscript({
   return (
     <Conversation className={`agent-chat-transcript h-full ${className ?? ''}`.trim()} {...props}>
       <ConversationContent className="session-transcript-scroll h-full overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl space-y-3 px-5 py-4">
+        <div className="mx-auto w-full max-w-3xl space-y-2.5 px-4 py-3">
           {messages.map((receivedMessage) => {
             const { id, from, message, timestamp } = receivedMessage;
             const locale = navigator?.language ?? 'en-US';

@@ -169,7 +169,7 @@ export function AgentSessionView({
       <div className="relative z-10 flex h-full flex-col overflow-hidden">
         <StatusBar agentConfig={agentConfig} />
 
-        <div className="session-visualizer flex h-[43vh] min-h-[250px] shrink-0 flex-col overflow-hidden border-b border-[var(--noir-border)]">
+        <div className="session-visualizer flex h-[34vh] min-h-[180px] max-h-[300px] shrink-0 flex-col overflow-hidden border-b border-[var(--noir-border)]">
           {screenShareTrack ? (
             <div
               className="h-full w-full"

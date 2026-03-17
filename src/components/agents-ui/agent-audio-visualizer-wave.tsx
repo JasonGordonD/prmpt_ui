@@ -63,5 +63,5 @@ export function AgentAudioVisualizerWave({
     return () => cancelAnimationFrame(animRef.current);
   }, [rgb, state, volume, lineWidth]);
 
-  return <canvas ref={canvasRef} className={`w-full max-w-[300px] h-[150px] ${className}`} />;
+  return <canvas ref={canvasRef} className={`w-full max-w-none h-full ${className}`} />;
 }

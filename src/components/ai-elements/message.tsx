@@ -13,7 +13,7 @@ export function Message({ from = 'assistant', className, children, ...props }: M
       className={cn('group animate-fade-in', isUser ? 'flex justify-end is-user' : 'flex justify-start', className)}
       {...props}
     >
-      <div className={cn(isUser ? 'max-w-[75%]' : 'max-w-[80%]')}>{children}</div>
+      <div className={cn(isUser ? 'max-w-[68%]' : 'max-w-[72%]')}>{children}</div>
     </div>
   );
 }
@@ -28,7 +28,7 @@ export function MessageResponse({
   ...props
 }: React.ComponentProps<'div'>) {
   return (
-    <div className={cn('agent-message', className)} {...props}>
+    <div className={cn(className)} {...props}>
       {children}
     </div>
   );

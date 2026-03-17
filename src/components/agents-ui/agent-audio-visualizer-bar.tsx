@@ -54,5 +54,5 @@ export function AgentAudioVisualizerBar({ color = '#888', state = 'idle', audioT
     return () => cancelAnimationFrame(animRef.current);
   }, [rgb, state, barCount, volume]);
 
-  return <canvas ref={canvasRef} className={`w-full max-w-[300px] h-[150px] ${className}`} />;
+  return <canvas ref={canvasRef} className={`w-full max-w-none h-full ${className}`} />;
 }

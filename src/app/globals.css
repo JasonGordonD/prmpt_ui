@@ -69,6 +69,7 @@ body {
   box-shadow:
     inset 0 -50px 70px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  padding-inline: clamp(16px, 3vw, 40px);
 }
 
 .session-transcript-pane {
@@ -113,15 +114,14 @@ textarea:focus:not(:focus-visible) {
 
 .agent-message {
   font-family: var(--font-display-face), 'Cormorant Garamond', serif;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 400;
-  line-height: 1.75;
+  line-height: 1.55;
   color: var(--noir-text);
   background: var(--noir-bg-card);
   border-left: 2px solid var(--noir-accent);
   border-radius: 0 8px 8px 8px;
-  padding: 16px 20px;
-  max-width: 80%;
+  padding: 10px 14px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.015);
 }
 
@@ -137,13 +137,13 @@ textarea:focus:not(:focus-visible) {
 
 .user-message {
   font-family: var(--font-body-face), Inter, system-ui, sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 400;
+  line-height: 1.45;
   color: var(--noir-text);
   background: var(--noir-bg-elevated);
   border-radius: 8px 0 8px 8px;
-  padding: 12px 16px;
-  max-width: 75%;
+  padding: 9px 12px;
   align-self: flex-end;
   border: 1px solid var(--noir-border-mid);
 }
@@ -287,9 +287,9 @@ textarea:focus:not(:focus-visible) {
   background:
     linear-gradient(180deg, rgba(16, 16, 22, 0.95) 0%, rgba(10, 10, 15, 0.95) 100%);
   border-top: 1px solid var(--noir-border);
-  min-height: 64px;
+  min-height: 56px;
   height: auto;
-  padding: 8px 24px;
+  padding: 8px 14px;
   backdrop-filter: blur(8px);
 }
 
@@ -335,8 +335,8 @@ textarea:focus:not(:focus-visible) {
   border-color: var(--noir-accent);
   background: transparent;
   width: auto;
-  min-width: 90px;
-  padding-inline: 14px;
+  min-width: 82px;
+  padding-inline: 12px;
   white-space: nowrap;
 }
 
