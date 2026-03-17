@@ -145,12 +145,51 @@ export function BaseTranscript({
   className = '',
 }: BaseTranscriptProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const previousMessageCountRef = useRef(0);
   const [copied, setCopied] = useState(false);
+  const [userAtBottom, setUserAtBottom] = useState(true);
+  const [newMessageCount, setNewMessageCount] = useState(0);
 
-  // Auto-scroll to bottom on new messages
+  const isAtBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  };
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  };
+
+  const handleScroll = () => {
+    const atBottom = isAtBottom();
+    setUserAtBottom(atBottom);
+    if (atBottom) {
+      setNewMessageCount(0);
+    }
+  };
+
+  // Smart auto-scroll behavior:
+  // - If user is near bottom, follow new messages
+  // - If user is reading history, preserve position and show a new-message pill
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const previousCount = previousMessageCountRef.current;
+    const nextCount = messages.length;
+    const addedCount = Math.max(0, nextCount - previousCount);
+    previousMessageCountRef.current = nextCount;
+
+    if (addedCount === 0) {
+      return;
+    }
+
+    if (isAtBottom()) {
+      scrollToBottom('smooth');
+      setNewMessageCount(0);
+      setUserAtBottom(true);
+    } else {
+      setNewMessageCount((count) => count + addedCount);
+      setUserAtBottom(false);
     }
   }, [messages]);
 
@@ -195,20 +234,38 @@ export function BaseTranscript({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3 p-4 min-h-0">
-        {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-[var(--text-muted)] animate-pulse-subtle">
-              Waiting for conversation to begin...
-            </p>
-          </div>
-        )}
-        {messages.map((msg) => (
-          <div key={msg.id} className="animate-fade-in">
-            <MessageRenderer message={msg} agentName={agentName} />
-          </div>
-        ))}
-        <TypingIndicator state={agentState} />
+      <div className="relative flex-1 min-h-0">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="h-full overflow-y-auto space-y-3 p-4 min-h-0"
+        >
+          {messages.length === 0 && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-sm text-[var(--text-muted)] animate-pulse-subtle">
+                Waiting for conversation to begin...
+              </p>
+            </div>
+          )}
+          {messages.map((msg) => (
+            <div key={msg.id} className="animate-fade-in">
+              <MessageRenderer message={msg} agentName={agentName} />
+            </div>
+          ))}
+          <TypingIndicator state={agentState} />
+        </div>
+
+        <button
+          type="button"
+          className={`new-message-pill ${newMessageCount > 0 && !userAtBottom ? 'visible' : ''}`}
+          onClick={() => {
+            scrollToBottom('smooth');
+            setUserAtBottom(true);
+            setNewMessageCount(0);
+          }}
+        >
+          ↓ {newMessageCount > 1 ? `${newMessageCount} new messages` : 'new message'}
+        </button>
       </div>
     </div>
   );

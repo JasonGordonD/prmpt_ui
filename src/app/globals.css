@@ -287,3 +287,28 @@ textarea:focus:not(:focus-visible) {
   background: var(--noir-accent);
   color: var(--noir-text);
 }
+
+.new-message-pill {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--noir-accent);
+  color: var(--noir-text);
+  font-family: var(--font-mono-face), 'Courier Prime', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.new-message-pill.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
