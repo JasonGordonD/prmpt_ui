@@ -44,8 +44,8 @@ export default function MinkaPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-[400px] space-y-6 text-center">
         <div className="space-y-3">
-          <h1 className="text-4xl font-bold text-[var(--text)]">Minka Moor</h1>
-          <p className="text-[var(--text-muted)] text-sm">Voice experience</p>
+          <h1 className="text-5xl font-display font-semibold text-[var(--noir-text)]">Minka Moor</h1>
+          <p className="text-[var(--noir-text-muted)] text-xs uppercase tracking-[0.16em] font-mono">Voice experience</p>
         </div>
 
         {error && (
@@ -57,7 +57,7 @@ export default function MinkaPage() {
         <button
           onClick={handleStart}
           disabled={connecting}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-[var(--primary)] text-white font-medium btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-[var(--noir-accent)] bg-[rgba(7,7,10,0.78)] text-[var(--noir-accent-bright)] font-mono text-xs uppercase tracking-[0.16em] btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--noir-accent-dim)]"
         >
           {connecting ? (
             <>

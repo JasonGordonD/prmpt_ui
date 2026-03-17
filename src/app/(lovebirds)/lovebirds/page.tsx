@@ -44,9 +44,9 @@ export default function LovebirdsPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-[400px] space-y-6 text-center">
         <div className="space-y-3">
-          <Heart className="w-8 h-8 text-[var(--primary)] mx-auto" />
-          <h1 className="text-3xl font-bold text-[var(--text)]">Lovebirds</h1>
-          <p className="text-[var(--text-muted)] text-sm">
+          <Heart className="w-8 h-8 text-[var(--noir-accent-bright)] mx-auto" />
+          <h1 className="text-5xl font-display font-semibold text-[var(--noir-text)]">Lovebirds</h1>
+          <p className="text-[var(--noir-text-muted)] text-xs uppercase tracking-[0.16em] font-mono">
             AI couples mediation with Raven Voss
           </p>
         </div>
@@ -60,7 +60,7 @@ export default function LovebirdsPage() {
         <button
           onClick={handleStart}
           disabled={connecting}
-          className="w-full py-3 rounded-lg bg-[var(--primary)] text-white font-medium btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-lg border border-[var(--noir-accent)] bg-[rgba(7,7,10,0.78)] text-[var(--noir-accent-bright)] font-mono text-xs uppercase tracking-[0.16em] btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-[var(--noir-accent-dim)]"
         >
           {connecting ? (
             <>
