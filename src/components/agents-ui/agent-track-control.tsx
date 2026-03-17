@@ -185,7 +185,7 @@ export function AgentTrackControl({
             barCount={3}
             state={pressed ? 'speaking' : 'disconnected'}
             audioTrack={pressed ? (audioTrack as never) : undefined}
-            className="audiovisualizer flex h-6 w-auto items-center justify-center gap-0.5"
+            className="audiovisualizer ml-1 h-3 w-5 shrink-0"
           />
         )}
       </AgentTrackToggle>

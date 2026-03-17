@@ -108,7 +108,7 @@ export function AgentChatTranscript({
 
   return (
     <Conversation className={`agent-chat-transcript h-full ${className ?? ''}`.trim()} {...props}>
-      <div className="transcript-actions session-transcript-toolbar flex items-center justify-end gap-2 border-b border-[var(--border)] px-4 py-2">
+      <div className="transcript-actions session-transcript-toolbar sticky top-0 z-10 flex items-center justify-end gap-2 border-b border-[var(--border)] px-4 py-2">
         <button
           type="button"
           onClick={() => void handleCopy()}
@@ -128,8 +128,8 @@ export function AgentChatTranscript({
           EXPORT
         </button>
       </div>
-      <ConversationContent className="session-transcript-scroll !gap-2.5 !p-0">
-        <div className="mx-auto w-full max-w-3xl space-y-2.5 px-4 py-3">
+      <ConversationContent className="session-transcript-scroll !min-h-full !justify-end !gap-2.5 !p-0">
+        <div className="mx-auto mt-auto w-full max-w-3xl space-y-2.5 px-4 py-3">
         {messages.map((receivedMessage) => {
           const { id, timestamp, from, message } = receivedMessage;
           const locale = navigator?.language ?? 'en-US';
@@ -139,7 +139,7 @@ export function AgentChatTranscript({
 
           return (
             <Message key={id} title={title} from={messageOrigin}>
-              <MessageContent>
+              <MessageContent className="!w-auto !gap-0 !bg-transparent !px-0 !py-0 group-[.is-user]:!bg-transparent group-[.is-user]:!px-0 group-[.is-user]:!py-0">
                 <MessageResponse className={messageOrigin === 'user' ? 'user-message' : 'agent-message'}>
                   {message}
                 </MessageResponse>
@@ -156,7 +156,7 @@ export function AgentChatTranscript({
 
         {incomingByteStreams?.map((stream) => (
           <Message key={stream.id} from="assistant">
-            <MessageContent>
+            <MessageContent className="!w-auto !gap-0 !bg-transparent !px-0 !py-0 group-[.is-user]:!bg-transparent group-[.is-user]:!px-0 group-[.is-user]:!py-0">
               <div className="agent-message">
                 {stream.mimeType.startsWith('image/') && (
                   <img src={stream.url} alt={stream.name} className="upload-preview" />
