@@ -93,7 +93,7 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
                 setStarting(false);
               }
             }}
-            className="rounded-[2px] border border-[var(--noir-accent)] bg-transparent px-8 py-3 font-mono text-[13px] uppercase tracking-[0.2em] text-[var(--noir-accent-bright)] transition-colors hover:bg-[var(--noir-accent-dim)] disabled:opacity-60"
+            className="preconnect-start-btn rounded-[2px] px-8 py-3 font-mono text-[13px] uppercase tracking-[0.2em] transition-colors disabled:opacity-60"
           >
             {starting ? 'Starting...' : 'Start Session'}
           </button>
