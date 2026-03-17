@@ -1,6 +1,4 @@
 {
-  "framework": "vite",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "cleanUrls": true
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs"
 }
