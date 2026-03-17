@@ -18,6 +18,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@agents-ui": "https://livekit.com/ui/r/{name}.json"
+    "@agents-ui": "https://livekit.com/ui/r/{name}.json",
+    "@ai-elements": "https://ai-sdk.dev/elements/api/registry/{name}.json"
   }
 }

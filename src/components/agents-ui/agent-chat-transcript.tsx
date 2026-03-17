@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useState, type ComponentProps } from 'react';
-import { type AgentState, type ReceivedMessage, useAgent, useSessionContext, useSessionMessages } from '@livekit/components-react';
 import { Check, Copy, Download } from 'lucide-react';
+import { type AgentState, type ReceivedMessage, useAgent, useSessionContext, useSessionMessages } from '@livekit/components-react';
 import {
   Conversation,
   ConversationContent,
@@ -13,9 +13,22 @@ import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator'
 import { AnimatePresence } from 'motion/react';
 import type { IncomingByteStream } from '@/hooks/agents-ui/use-realtime-media-data';
 
+/**
+ * Props for the AgentChatTranscript component.
+ */
 export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
+  /**
+   * The current state of the agent. When 'thinking', displays a loading indicator.
+   */
   agentState?: AgentState;
+  /**
+   * Array of messages to display in the transcript.
+   * @defaultValue []
+   */
   messages?: ReceivedMessage[];
+  /**
+   * Additional CSS class names to apply to the conversation container.
+   */
   className?: string;
   optimisticImages?: string[];
   incomingByteStreams?: IncomingByteStream[];
@@ -39,7 +52,7 @@ function getMessageSpeaker(message: ReceivedMessage, agentName?: string): string
 }
 
 export function AgentChatTranscript({
-  agentState,
+  agentState: propAgentState,
   messages: propMessages = [],
   optimisticImages,
   incomingByteStreams,
@@ -51,6 +64,7 @@ export function AgentChatTranscript({
   const session = useSessionContext();
   const { messages: sessionMessages } = useSessionMessages(session);
   const messages = propMessages.length > 0 ? propMessages : sessionMessages;
+  const agentState = propAgentState ?? state;
   const [copied, setCopied] = useState(false);
 
   const serializeForClipboard = useCallback(() => {
@@ -114,58 +128,63 @@ export function AgentChatTranscript({
           EXPORT
         </button>
       </div>
-      <ConversationContent className="session-transcript-scroll h-full overflow-y-auto">
+      <ConversationContent className="session-transcript-scroll !gap-2.5 !p-0">
         <div className="mx-auto w-full max-w-3xl space-y-2.5 px-4 py-3">
-          {messages.map((receivedMessage) => {
-            const { id, from, message, timestamp } = receivedMessage;
-            const locale = navigator?.language ?? 'en-US';
-            const messageOrigin = from?.isLocal ? 'user' : 'assistant';
-            const time = new Date(timestamp);
-            const title = time.toLocaleTimeString(locale, { timeStyle: 'medium' });
+        {messages.map((receivedMessage) => {
+          const { id, timestamp, from, message } = receivedMessage;
+          const locale = navigator?.language ?? 'en-US';
+          const messageOrigin = from?.isLocal ? 'user' : 'assistant';
+          const time = new Date(timestamp);
+          const title = time.toLocaleTimeString(locale, { timeStyle: 'medium' });
 
-            return (
-              <Message key={id} title={title} from={messageOrigin}>
-                <MessageContent>
-                  <MessageResponse className={messageOrigin === 'user' ? 'user-message' : 'agent-message'}>
-                    {message}
-                  </MessageResponse>
-                </MessageContent>
-              </Message>
-            );
-          })}
-
-          {optimisticImages?.map((src) => (
-            <div key={src} className="flex justify-end animate-fade-in">
-              <img src={src} alt="Uploaded preview" className="upload-preview" />
-            </div>
-          ))}
-
-          {incomingByteStreams?.map((stream) => (
-            <Message key={stream.id} from="assistant">
+          return (
+            <Message key={id} title={title} from={messageOrigin}>
               <MessageContent>
-                <div className="agent-message">
-                  {stream.mimeType.startsWith('image/') && (
-                    <img src={stream.url} alt={stream.name} className="upload-preview" />
-                  )}
-                  {stream.mimeType.startsWith('video/') && (
-                    <video src={stream.url} controls className="max-h-72 rounded-md border border-[var(--noir-border-mid)]" />
-                  )}
-                  {!stream.mimeType.startsWith('image/') && !stream.mimeType.startsWith('video/') && (
-                    <a href={stream.url} download={stream.name} className="media-video-download-link">
-                      Download {stream.name}
-                    </a>
-                  )}
-                </div>
+                <MessageResponse className={messageOrigin === 'user' ? 'user-message' : 'agent-message'}>
+                  {message}
+                </MessageResponse>
               </MessageContent>
             </Message>
-          ))}
+          );
+        })}
 
-          <AnimatePresence>
-            {(agentState ?? state) === 'thinking' && <AgentChatIndicator size="sm" />}
-          </AnimatePresence>
+        {optimisticImages?.map((src) => (
+          <div key={src} className="flex justify-end animate-fade-in">
+            <img src={src} alt="Uploaded preview" className="upload-preview" />
+          </div>
+        ))}
+
+        {incomingByteStreams?.map((stream) => (
+          <Message key={stream.id} from="assistant">
+            <MessageContent>
+              <div className="agent-message">
+                {stream.mimeType.startsWith('image/') && (
+                  <img src={stream.url} alt={stream.name} className="upload-preview" />
+                )}
+                {stream.mimeType.startsWith('video/') && (
+                  <video src={stream.url} controls className="max-h-72 rounded-md border border-[var(--noir-border-mid)]" />
+                )}
+                {!stream.mimeType.startsWith('image/') && !stream.mimeType.startsWith('video/') && (
+                  <a href={stream.url} download={stream.name} className="media-video-download-link">
+                    Download {stream.name}
+                  </a>
+                )}
+              </div>
+            </MessageContent>
+          </Message>
+        ))}
+
+        <AnimatePresence>
+          {agentState === 'thinking' && (
+            <div className="flex items-center gap-2 px-2 py-1.5 animate-fade-in">
+              <AgentChatIndicator size="sm" className="bg-[var(--noir-accent-bright)]" />
+              <span className="text-xs text-[var(--text-muted)]">Thinking...</span>
+            </div>
+          )}
+        </AnimatePresence>
         </div>
       </ConversationContent>
-      <ConversationScrollButton />
+      <ConversationScrollButton className="!bottom-4 !rounded-full !border-[var(--noir-border-accent)] !bg-[var(--noir-bg-surface)] !text-[var(--noir-text)] hover:!bg-[var(--noir-accent-dim)]" />
     </Conversation>
   );
 }

@@ -1,19 +1,92 @@
-'use client';
+import { type Ref, type ComponentProps } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { motion, type MotionProps } from 'motion/react';
 
-export function AgentChatIndicator({ size = 'sm' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const dotSize = size === 'lg' ? 'h-2.5 w-2.5' : size === 'md' ? 'h-2 w-2' : 'h-1.5 w-1.5';
+import { cn } from '@/lib/utils';
+
+const motionAnimationProps = {
+  variants: {
+    hidden: {
+      opacity: 0,
+      scale: 0.1,
+      transition: {
+        duration: 0.1,
+        ease: 'linear' as const,
+      },
+    },
+    visible: {
+      opacity: [0.5, 1],
+      scale: [1, 1.2],
+      transition: {
+        type: 'spring' as const,
+        bounce: 0,
+        duration: 0.5,
+        repeat: Infinity,
+        repeatType: 'mirror' as const,
+      },
+    },
+  },
+  initial: 'hidden',
+  animate: 'visible',
+  exit: 'hidden',
+};
+
+const agentChatIndicatorVariants = cva('bg-muted-foreground inline-block size-2.5 rounded-full', {
+  variants: {
+    size: {
+      sm: 'size-2.5',
+      md: 'size-4',
+      lg: 'size-6',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+/**
+ * Props for the AgentChatIndicator component.
+ */
+export interface AgentChatIndicatorProps extends MotionProps {
+  /**
+   * The size of the indicator dot.
+   * @defaultValue 'md'
+   */
+  size?: 'sm' | 'md' | 'lg';
+  /**
+   * Additional CSS class names to apply to the indicator.
+   */
+  className?: string;
+  /**
+   * Allows getting a ref to the component instance.\nOnce the component unmounts, React will set `ref.current` to `null`\n(or call the ref with `null` if you passed a callback ref).\n@see {@link https://react.dev/learn/referencing-values-with-refs#refs-and-the-dom React Docs}
+   */
+  ref?: Ref<HTMLSpanElement>;
+}
+
+/**
+ * An animated indicator that shows the agent is processing or thinking.
+ * Displays as a pulsing dot, typically used in chat interfaces.
+ *
+ * @extends ComponentProps<'span'>
+ *
+ * @example
+ * ```tsx
+ * {agentState === 'thinking' && <AgentChatIndicator size="md" />}
+ * ```
+ */
+export function AgentChatIndicator({
+  size = 'md',
+  className,
+  ...props
+}: AgentChatIndicatorProps &
+  ComponentProps<'span'> &
+  VariantProps<typeof agentChatIndicatorVariants>) {
   return (
-    <div className="flex items-center gap-1.5 px-2 py-1.5 animate-fade-in">
-      <div className="flex gap-1">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className={`${dotSize} rounded-full bg-[var(--primary)] animate-pulse-subtle`}
-            style={{ animationDelay: `${i * 0.2}s` }}
-          />
-        ))}
-      </div>
-      <span className="text-xs text-[var(--text-muted)]">Thinking...</span>
-    </div>
+    <motion.span
+      {...motionAnimationProps}
+      transition={{ duration: 0.1, ease: 'linear' as const }}
+      className={cn(agentChatIndicatorVariants({ size }), className)}
+      {...props}
+    />
   );
 }
