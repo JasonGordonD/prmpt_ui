@@ -9,6 +9,8 @@ type Props = {
   state?: string;
   audioTrack?: TrackReference;
   className?: string;
+  rowCount?: number;
+  columnCount?: number;
 };
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -18,7 +20,14 @@ function hexToRgb(hex: string): [number, number, number] {
     : [128, 128, 128];
 }
 
-export function AgentAudioVisualizerGrid({ color = '#888', state = 'idle', audioTrack, className = '' }: Props) {
+export function AgentAudioVisualizerGrid({
+  color = '#888',
+  state = 'idle',
+  audioTrack,
+  className = '',
+  rowCount = 6,
+  columnCount = 12,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const rgb = useMemo(() => hexToRgb(color), [color]);
@@ -34,7 +43,8 @@ export function AgentAudioVisualizerGrid({ color = '#888', state = 'idle', audio
     canvas.height = h;
     let t = 0;
     const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
-    const cols = 12, rows = 6;
+    const cols = columnCount;
+    const rows = rowCount;
     const cellW = w / cols, cellH = h / rows;
 
     const draw = () => {
@@ -53,7 +63,7 @@ export function AgentAudioVisualizerGrid({ color = '#888', state = 'idle', audio
     };
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state, volume]);
+  }, [rgb, state, volume, rowCount, columnCount]);
 
   return <canvas ref={canvasRef} className={`w-full max-w-[300px] h-[150px] ${className}`} />;
 }

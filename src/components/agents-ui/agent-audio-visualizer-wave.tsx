@@ -9,6 +9,7 @@ type Props = {
   state?: string;
   audioTrack?: TrackReference;
   className?: string;
+  lineWidth?: number;
 };
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -18,7 +19,13 @@ function hexToRgb(hex: string): [number, number, number] {
     : [128, 128, 128];
 }
 
-export function AgentAudioVisualizerWave({ color = '#888', state = 'idle', audioTrack, className = '' }: Props) {
+export function AgentAudioVisualizerWave({
+  color = '#888',
+  state = 'idle',
+  audioTrack,
+  className = '',
+  lineWidth = 2,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const rgb = useMemo(() => hexToRgb(color), [color]);
@@ -47,14 +54,14 @@ export function AgentAudioVisualizerWave({ color = '#888', state = 'idle', audio
           ctx.lineTo(x, y);
         }
         ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${0.6 - layer * 0.15})`;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = lineWidth;
         ctx.stroke();
       }
       animRef.current = requestAnimationFrame(draw);
     };
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state, volume]);
+  }, [rgb, state, volume, lineWidth]);
 
   return <canvas ref={canvasRef} className={`w-full max-w-[300px] h-[150px] ${className}`} />;
 }

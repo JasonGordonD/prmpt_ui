@@ -2,81 +2,67 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Track } from 'livekit-client';
-import { VideoTrack, useLocalParticipant, useSessionContext, useSessionMessages, useTrackVolume, useTracks, useVoiceAssistant } from '@livekit/components-react';
+import { VideoTrack, useSessionContext, useSessionMessages, useTracks, useVoiceAssistant } from '@livekit/components-react';
 import type { AgentConfig } from '@/lib/agents';
 import { StatusBar } from '@/components/shared/status-bar';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import { AgentControlBar, type AgentControlBarControls } from '@/components/agents-ui/agent-control-bar';
-import { ReactShaderToy } from '@/components/agents-ui/react-shader-toy';
-
-const NOIR_SHADER = `
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-  vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
-
-  float amplitude = max(iAudioAmplitude, 0.04);
-  float t = iTime * 0.22;
-  vec2 p = uv * 1.35;
-
-  float warp = sin((p.y + t) * 2.2) * 0.12 + cos((p.x - t * 0.8) * 2.6) * 0.08;
-  p += vec2(warp, -warp * 0.55);
-
-  float n = 0.0;
-  for(int i = 1; i <= 6; i++) {
-    float fi = float(i);
-    n += sin(p.x * fi * 2.6 + t + amplitude * 2.0) * cos(p.y * fi * 2.1 - t * 0.6) / fi;
-  }
-
-  float flame = smoothstep(0.08, 0.92, n * (1.45 + amplitude * 2.0) + 0.42);
-  vec3 col = vec3(0.012, 0.008, 0.012);
-  col += vec3(0.23, 0.03, 0.028) * flame;
-  col += vec3(0.78, 0.12, 0.09) * pow(flame, 1.85) * (0.45 + amplitude * 0.9);
-
-  float innerGlow = exp(-3.0 * dot(p, p));
-  col += vec3(0.24, 0.04, 0.03) * innerGlow * (0.55 + amplitude);
-
-  float vignette = smoothstep(1.2, 0.18, dot(uv * 1.15, uv * 1.15));
-  col *= vignette;
-
-  fragColor = vec4(col, 1.0);
-}
-`;
+import { AgentAudioVisualizerAura } from '@/components/agents-ui/agent-audio-visualizer-aura';
+import { AgentAudioVisualizerBar } from '@/components/agents-ui/agent-audio-visualizer-bar';
+import { AgentAudioVisualizerGrid } from '@/components/agents-ui/agent-audio-visualizer-grid';
+import { AgentAudioVisualizerRadial } from '@/components/agents-ui/agent-audio-visualizer-radial';
+import { AgentAudioVisualizerWave } from '@/components/agents-ui/agent-audio-visualizer-wave';
 
 type AgentSessionViewProps = {
   agentConfig: AgentConfig;
   isPreConnectBufferEnabled?: boolean;
+  preConnectMessage?: string;
   supportsScreenShare?: boolean;
   supportsChatInput?: boolean;
   supportsVideoInput?: boolean;
   audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
-  controlsVariant?: 'outline' | 'livekit';
+  audioVisualizerColor?: `#${string}`;
+  audioVisualizerColorShift?: number;
+  audioVisualizerBarCount?: number;
+  audioVisualizerGridRowCount?: number;
+  audioVisualizerGridColumnCount?: number;
+  audioVisualizerRadialBarCount?: number;
+  audioVisualizerRadialRadius?: number;
+  audioVisualizerWaveLineWidth?: number;
+  controlsVariant?: 'default' | 'outline' | 'livekit';
+  className?: string;
   onLeave?: () => void | Promise<void>;
 };
 
 export function AgentSessionView({
   agentConfig,
   isPreConnectBufferEnabled = true,
+  preConnectMessage = 'Agent is listening, ask it a question',
   supportsScreenShare = true,
   supportsChatInput = true,
   supportsVideoInput = false,
-  audioVisualizerType: _audioVisualizerType = 'bar',
+  audioVisualizerType = 'bar',
+  audioVisualizerColor,
+  audioVisualizerColorShift,
+  audioVisualizerBarCount = 24,
+  audioVisualizerGridRowCount = 6,
+  audioVisualizerGridColumnCount = 12,
+  audioVisualizerRadialBarCount = 32,
+  audioVisualizerRadialRadius = 50,
+  audioVisualizerWaveLineWidth = 2,
   controlsVariant = 'outline',
+  className = '',
   onLeave,
 }: AgentSessionViewProps) {
-  const { audioTrack: agentAudioTrack } = useVoiceAssistant();
-  const { microphoneTrack } = useLocalParticipant();
+  const { audioTrack: agentAudioTrack, state: assistantState } = useVoiceAssistant();
   const [screenShareTrack] = useTracks([Track.Source.ScreenShare]);
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const [chatOpen, setChatOpen] = useState(true);
   const [optimisticImages, setOptimisticImages] = useState<string[]>([]);
   const [uploadToast, setUploadToast] = useState('');
-
-  const agentTrackVolume = useTrackVolume(agentAudioTrack);
-  const userTrackVolume = useTrackVolume(microphoneTrack?.track as never);
-  const shaderAmplitude = useMemo(() => {
-    const louderTrack = Math.max(agentTrackVolume ?? 0, userTrackVolume ?? 0);
-    return Math.max(0.05, Math.min(1.2, louderTrack));
-  }, [agentTrackVolume, userTrackVolume]);
+  const visualizerColor = audioVisualizerColor ?? agentConfig.theme.auraColor;
+  const visualizerColorShift = audioVisualizerColorShift ?? agentConfig.theme.auraColorShift;
 
   const controls = useMemo<AgentControlBarControls>(() => ({
     microphone: true,
@@ -112,8 +98,71 @@ export function AgentSessionView({
     };
   }, [optimisticImages]);
 
+  const renderAudioVisualizer = () => {
+    if (audioVisualizerType === 'aura') {
+      return (
+        <AgentAudioVisualizerAura
+          audioTrack={agentAudioTrack}
+          state={assistantState}
+          color={visualizerColor}
+          colorShift={visualizerColorShift}
+          size="xl"
+          className="w-full h-full"
+        />
+      );
+    }
+
+    if (audioVisualizerType === 'wave') {
+      return (
+        <AgentAudioVisualizerWave
+          audioTrack={agentAudioTrack}
+          state={assistantState}
+          color={visualizerColor}
+          lineWidth={audioVisualizerWaveLineWidth}
+          className="w-full h-full"
+        />
+      );
+    }
+
+    if (audioVisualizerType === 'grid') {
+      return (
+        <AgentAudioVisualizerGrid
+          audioTrack={agentAudioTrack}
+          state={assistantState}
+          color={visualizerColor}
+          rowCount={audioVisualizerGridRowCount}
+          columnCount={audioVisualizerGridColumnCount}
+          className="w-full h-full"
+        />
+      );
+    }
+
+    if (audioVisualizerType === 'radial') {
+      return (
+        <AgentAudioVisualizerRadial
+          audioTrack={agentAudioTrack}
+          state={assistantState}
+          color={visualizerColor}
+          barCount={audioVisualizerRadialBarCount}
+          radius={audioVisualizerRadialRadius}
+          className="w-full h-full"
+        />
+      );
+    }
+
+    return (
+      <AgentAudioVisualizerBar
+        audioTrack={agentAudioTrack}
+        state={assistantState}
+        color={visualizerColor}
+        barCount={audioVisualizerBarCount}
+        className="w-full h-full"
+      />
+    );
+  };
+
   return (
-    <div className="session-shell relative flex h-screen flex-col overflow-hidden">
+    <div className={`session-shell relative flex h-screen flex-col overflow-hidden ${className}`}>
       <div className="session-shell-overlay pointer-events-none absolute inset-0" />
       <div className="relative z-10 flex h-full flex-col overflow-hidden">
         <StatusBar agentConfig={agentConfig} />
@@ -130,11 +179,9 @@ export function AgentSessionView({
               />
             </div>
           ) : (
-            <ReactShaderToy
-              fs={NOIR_SHADER}
-              uniforms={{ iAudioAmplitude: shaderAmplitude }}
-              className="h-full w-full"
-            />
+            <div className="h-full w-full flex items-center justify-center">
+              {renderAudioVisualizer()}
+            </div>
           )}
         </div>
 
@@ -148,8 +195,8 @@ export function AgentSessionView({
         )}
 
         {isPreConnectBufferEnabled && messages.length === 0 && (
-          <div className="shrink-0 px-4 pb-2 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)]">
-            Agent is listening, ask it a question
+          <div className="agent-preconnect-message shrink-0 px-4 pb-2 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)]">
+            {preConnectMessage}
           </div>
         )}
 

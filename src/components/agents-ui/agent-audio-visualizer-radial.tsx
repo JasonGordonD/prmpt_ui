@@ -9,6 +9,8 @@ type Props = {
   state?: string;
   audioTrack?: TrackReference;
   className?: string;
+  barCount?: number;
+  radius?: number;
 };
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -18,7 +20,14 @@ function hexToRgb(hex: string): [number, number, number] {
     : [128, 128, 128];
 }
 
-export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', audioTrack, className = '' }: Props) {
+export function AgentAudioVisualizerRadial({
+  color = '#888',
+  state = 'idle',
+  audioTrack,
+  className = '',
+  barCount = 32,
+  radius = 50,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const rgb = useMemo(() => hexToRgb(color), [color]);
@@ -34,7 +43,7 @@ export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', aud
     canvas.height = dim;
     let t = 0;
     const baseIntensity = state === 'speaking' ? 1.0 : state === 'thinking' ? 0.5 : 0.2;
-    const segCount = 32;
+    const segCount = barCount;
 
     const draw = () => {
       t += 0.03;
@@ -42,7 +51,7 @@ export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', aud
       ctx.clearRect(0, 0, dim, dim);
       const cx = dim / 2;
       const cy = dim / 2;
-      const baseR = dim * 0.25;
+      const baseR = radius;
 
       for (let i = 0; i < segCount; i++) {
         const angle = (i / segCount) * Math.PI * 2;
@@ -64,7 +73,7 @@ export function AgentAudioVisualizerRadial({ color = '#888', state = 'idle', aud
     };
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [rgb, state, volume]);
+  }, [rgb, state, volume, barCount, radius]);
 
   return <canvas ref={canvasRef} className={`rounded-full ${className}`} style={{ width: 200, height: 200 }} />;
 }

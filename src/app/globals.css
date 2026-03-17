@@ -189,6 +189,11 @@ textarea:focus:not(:focus-visible) {
   50% { transform: scaleY(1); opacity: 1; }
 }
 
+@keyframes preconnect-shimmer {
+  0% { background-position: -180% 0; }
+  100% { background-position: 180% 0; }
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -417,6 +422,21 @@ textarea:focus:not(:focus-visible) {
 .session-transcript-scroll {
   background:
     linear-gradient(180deg, rgba(20, 20, 30, 0.78) 0%, rgba(12, 12, 18, 0.88) 100%);
+}
+
+.agent-preconnect-message {
+  position: relative;
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    rgba(138, 130, 128, 0.45) 0%,
+    rgba(232, 224, 213, 0.9) 45%,
+    rgba(138, 130, 128, 0.45) 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: preconnect-shimmer 2.2s linear infinite;
 }
 
 .upload-preview {
