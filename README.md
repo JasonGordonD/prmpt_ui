@@ -58,3 +58,49 @@ Each agent requires three LiveKit credentials and one access password.
 
 - JRVS currently uses named dispatch and sends `agentName="JRVS"` in token requests.
 - The Pack supports both `*_PACK` and legacy `*_THEPACK` env var names.
+
+## Deployment + rollback references (2026-03-16 overhaul)
+
+### Production deployment target
+
+- Project URL: https://prmpt-ui.vercel.app
+- Git deploy source: `main` branch
+- Overhaul rollout refs (in order):
+  - `b518767` — UI-01 foundation
+  - `a433dcc` — UI-02 noir system
+  - `e28620b` — UI-03 shader
+  - `329a49b` — UI-04 screenshare
+  - `9ffb886` — UI-05 bubbles
+  - `2038398` — UI-06 status bar
+  - `eff0c0b` — UI-07 control bar
+  - `27f5892` — UI-08 autoscroll
+  - `ebd63a3` — UI-09 upload stream
+  - `91ad967` — UI-10 media downloads
+  - `0bc4e43` — UI-11 token identity map
+  - `1633ade` — UI-12 copy/export polish
+  - `1062267` — UI-13 pre-connect screen
+
+### Rollback references
+
+- Last known pre-overhaul baseline: `19487c5`
+- Per-section rollback points:
+  - after UI-01: `b518767`
+  - after UI-02: `a433dcc`
+  - after UI-03: `e28620b`
+  - after UI-04: `329a49b`
+  - after UI-05: `9ffb886`
+  - after UI-06: `2038398`
+  - after UI-07: `eff0c0b`
+  - after UI-08: `27f5892`
+  - after UI-09: `ebd63a3`
+  - after UI-10: `91ad967`
+  - after UI-11: `0bc4e43`
+  - after UI-12: `1633ade`
+  - after UI-13: `1062267`
+
+### Rollback procedure (Vercel)
+
+1. Open the Vercel project for `prmpt_ui`.
+2. Select a deployment generated from the desired rollback commit above.
+3. Promote/redeploy that commit to Production.
+4. Verify `/api/debug/env` and start-session flow for each agent route.
