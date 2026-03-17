@@ -147,6 +147,21 @@ textarea:focus:not(:focus-visible) {
   to { opacity: 1; }
 }
 
+@keyframes status-listening-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes status-thinking-fade {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+@keyframes status-speaking-bars {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -181,4 +196,55 @@ textarea:focus:not(:focus-visible) {
 }
 .btn-interactive:active {
   transform: scale(0.98);
+}
+
+.status-bar {
+  width: 100%;
+  height: 40px;
+  background: var(--noir-bg-surface);
+  border-bottom: 1px solid var(--noir-border);
+}
+
+.status-state-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.status-state-dot-listening {
+  background: var(--noir-accent-bright);
+  animation: status-listening-pulse 2s ease-in-out infinite;
+}
+
+.status-state-dot-idle {
+  background: var(--noir-text-dim);
+}
+
+.status-state-thinking {
+  display: flex;
+  gap: 4px;
+}
+
+.status-state-thinking-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--noir-accent-bright);
+  animation: status-thinking-fade 900ms ease-in-out infinite;
+}
+
+.status-state-speaking {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 14px;
+}
+
+.status-state-speaking-bar {
+  width: 2px;
+  height: 100%;
+  background: var(--noir-accent-bright);
+  transform-origin: bottom;
+  animation: status-speaking-bars 700ms ease-in-out infinite;
 }
