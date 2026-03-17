@@ -10,12 +10,14 @@ import {
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
 import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator';
 import { AnimatePresence } from 'motion/react';
+import type { IncomingByteStream } from '@/hooks/agents-ui/use-realtime-media-data';
 
 export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
   agentState?: AgentState;
   messages?: ReceivedMessage[];
   className?: string;
   optimisticImages?: string[];
+  incomingByteStreams?: IncomingByteStream[];
   agentName?: string;
 }
 
@@ -23,6 +25,7 @@ export function AgentChatTranscript({
   agentState,
   messages: propMessages = [],
   optimisticImages,
+  incomingByteStreams,
   className,
   ...props
 }: AgentChatTranscriptProps) {
@@ -57,6 +60,26 @@ export function AgentChatTranscript({
             <div key={src} className="flex justify-end animate-fade-in">
               <img src={src} alt="Uploaded preview" className="upload-preview" />
             </div>
+          ))}
+
+          {incomingByteStreams?.map((stream) => (
+            <Message key={stream.id} from="assistant">
+              <MessageContent>
+                <div className="agent-message">
+                  {stream.mimeType.startsWith('image/') && (
+                    <img src={stream.url} alt={stream.name} className="upload-preview" />
+                  )}
+                  {stream.mimeType.startsWith('video/') && (
+                    <video src={stream.url} controls className="max-h-72 rounded-md border border-[var(--noir-border-mid)]" />
+                  )}
+                  {!stream.mimeType.startsWith('image/') && !stream.mimeType.startsWith('video/') && (
+                    <a href={stream.url} download={stream.name} className="media-video-download-link">
+                      Download {stream.name}
+                    </a>
+                  )}
+                </div>
+              </MessageContent>
+            </Message>
           ))}
 
           <AnimatePresence>

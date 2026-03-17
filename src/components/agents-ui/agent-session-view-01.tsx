@@ -12,6 +12,7 @@ import { AgentAudioVisualizerBar } from '@/components/agents-ui/agent-audio-visu
 import { AgentAudioVisualizerGrid } from '@/components/agents-ui/agent-audio-visualizer-grid';
 import { AgentAudioVisualizerRadial } from '@/components/agents-ui/agent-audio-visualizer-radial';
 import { AgentAudioVisualizerWave } from '@/components/agents-ui/agent-audio-visualizer-wave';
+import { useRealtimeMediaData } from '@/hooks/agents-ui/use-realtime-media-data';
 
 type AgentSessionViewProps = {
   agentConfig: AgentConfig;
@@ -63,6 +64,7 @@ export function AgentSessionView({
   const [uploadToast, setUploadToast] = useState('');
   const visualizerColor = audioVisualizerColor ?? agentConfig.theme.auraColor;
   const visualizerColorShift = audioVisualizerColorShift ?? agentConfig.theme.auraColorShift;
+  const { incomingByteStreams } = useRealtimeMediaData({ chatOpen });
 
   const controls = useMemo<AgentControlBarControls>(() => ({
     microphone: true,
@@ -190,6 +192,7 @@ export function AgentSessionView({
             <AgentChatTranscript
               agentName={agentConfig.displayName}
               optimisticImages={optimisticImages}
+              incomingByteStreams={incomingByteStreams}
             />
           </div>
         )}
