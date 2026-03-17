@@ -312,6 +312,17 @@ textarea:focus:not(:focus-visible) {
   color: var(--noir-accent-bright);
   border-color: var(--noir-accent);
   background: transparent;
+  width: auto;
+  min-width: 90px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+
+.agent-control-bar [data-control="leave"] span {
+  font-family: var(--font-mono-face), 'Courier Prime', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .agent-control-bar [data-control="leave"]:hover {
