@@ -6,7 +6,7 @@ import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
-    const { agentId, agentName, metadata } = await req.json();
+    const { agentId, agentName, metadata, agentPassword } = await req.json();
 
     if (!agentId) {
       return NextResponse.json({ error: 'Missing agentId' }, { status: 400 });
@@ -49,7 +49,12 @@ export async function POST(req: NextRequest) {
     const livekitUrl = envConfig.credentials.url;
 
     const sessionId = `${agentId}-${crypto.randomUUID()}`;
-    const identity = `${agentId}-user-${crypto.randomUUID()}`;
+    const identityMap: Record<string, string> = {
+      ER407: 'rami',
+      Luvisblind1: 'lovebirds-user',
+    };
+    const participantIdentity = identityMap[agentPassword] ?? `user-${crypto.randomUUID()}`;
+    const identity = participantIdentity;
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity,
