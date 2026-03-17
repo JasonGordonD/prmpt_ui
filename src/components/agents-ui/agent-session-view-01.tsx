@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Track } from 'livekit-client';
-import { VideoTrack, useAgent, useLocalParticipant, useSessionContext, useSessionMessages, useTrackVolume, useTracks, useVoiceAssistant } from '@livekit/components-react';
+import { VideoTrack, useLocalParticipant, useSessionContext, useSessionMessages, useTrackVolume, useTracks, useVoiceAssistant } from '@livekit/components-react';
 import { useChat } from '@livekit/components-react';
 import type { AgentConfig } from '@/lib/agents';
 import { StatusBar } from '@/components/shared/status-bar';
@@ -64,7 +64,6 @@ export function AgentSessionView({
   controlsVariant = 'outline',
   onLeave,
 }: AgentSessionViewProps) {
-  const agent = useAgent();
   const { audioTrack: agentAudioTrack } = useVoiceAssistant();
   const { microphoneTrack } = useLocalParticipant();
   const [screenShareTrack] = useTracks([Track.Source.ScreenShare]);
@@ -157,8 +156,6 @@ export function AgentSessionView({
         {supportsChatInput && chatOpen && (
           <div className="session-transcript-pane min-h-0 flex-1 overflow-hidden">
             <AgentChatTranscript
-              messages={messages}
-              agentState={agent.state}
               agentName={agentConfig.displayName}
               optimisticImages={optimisticImages}
             />
