@@ -199,7 +199,7 @@ export function BaseTranscript({
     const text = serializeForClipboard(messages, agentName);
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1500);
   }, [messages, agentName]);
 
   const handleExport = useCallback(() => {
@@ -216,22 +216,22 @@ export function BaseTranscript({
   return (
     <div className={`flex flex-col h-full min-h-0 ${className}`}>
       {/* Toolbar */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--border)] shrink-0">
+      <div className="transcript-actions flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--border)] shrink-0">
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] rounded-lg btn-interactive"
+          className="flex items-center gap-1.5 btn-interactive"
           title="Copy transcript"
         >
           {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? 'COPIED' : 'COPY'}
         </button>
         <button
           onClick={handleExport}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] rounded-lg btn-interactive"
+          className="flex items-center gap-1.5 btn-interactive"
           title="Export transcript"
         >
           <Download className="w-3.5 h-3.5" />
-          Export
+          EXPORT
         </button>
       </div>
 

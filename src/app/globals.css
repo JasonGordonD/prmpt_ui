@@ -364,3 +364,20 @@ textarea:focus:not(:focus-visible) {
   text-transform: uppercase;
   color: var(--noir-text-muted);
 }
+
+.transcript-actions button {
+  font-family: var(--font-mono-face), 'Courier Prime', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--noir-text-dim);
+  border: 1px solid var(--noir-border);
+  background: transparent;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.transcript-actions button:hover {
+  color: var(--noir-text-muted);
+  border-color: var(--noir-border-accent);
+}
