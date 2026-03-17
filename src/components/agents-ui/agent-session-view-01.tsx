@@ -13,20 +13,28 @@ const NOIR_SHADER = `
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
 
-  float amplitude = iAudioAmplitude * 2.0;
-  float t = iTime * 0.3;
+  float amplitude = max(iAudioAmplitude, 0.04);
+  float t = iTime * 0.22;
+  vec2 p = uv * 1.35;
+
+  float warp = sin((p.y + t) * 2.2) * 0.12 + cos((p.x - t * 0.8) * 2.6) * 0.08;
+  p += vec2(warp, -warp * 0.55);
 
   float n = 0.0;
-  for(int i = 1; i <= 4; i++) {
+  for(int i = 1; i <= 6; i++) {
     float fi = float(i);
-    n += sin(uv.x * fi * 3.0 + t + amplitude) * cos(uv.y * fi * 2.0 + t * 0.7) / fi;
+    n += sin(p.x * fi * 2.6 + t + amplitude * 2.0) * cos(p.y * fi * 2.1 - t * 0.6) / fi;
   }
 
-  vec3 col = vec3(0.04, 0.02, 0.03);
-  col += vec3(0.35, 0.06, 0.06) * smoothstep(0.0, 0.6, n * amplitude + 0.1);
-  col += vec3(0.75, 0.15, 0.12) * smoothstep(0.4, 0.8, n * amplitude);
+  float flame = smoothstep(0.08, 0.92, n * (1.45 + amplitude * 2.0) + 0.42);
+  vec3 col = vec3(0.012, 0.008, 0.012);
+  col += vec3(0.23, 0.03, 0.028) * flame;
+  col += vec3(0.78, 0.12, 0.09) * pow(flame, 1.85) * (0.45 + amplitude * 0.9);
 
-  float vignette = 1.0 - dot(uv * 1.5, uv * 1.5);
+  float innerGlow = exp(-3.0 * dot(p, p));
+  col += vec3(0.24, 0.04, 0.03) * innerGlow * (0.55 + amplitude);
+
+  float vignette = smoothstep(1.2, 0.18, dot(uv * 1.15, uv * 1.15));
   col *= vignette;
 
   fragColor = vec4(col, 1.0);
@@ -106,54 +114,57 @@ export function AgentSessionView({
   }, [optimisticImages]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <StatusBar agentConfig={agentConfig} />
+    <div className="session-shell relative flex h-screen flex-col overflow-hidden">
+      <div className="session-shell-overlay pointer-events-none absolute inset-0" />
+      <div className="relative z-10 flex h-full flex-col overflow-hidden">
+        <StatusBar agentConfig={agentConfig} />
 
-      <div className="flex h-[40vh] min-h-[220px] shrink-0 flex-col overflow-hidden border-b border-[var(--border)]">
-        {screenShareTrack ? (
-          <div
-            className="h-full w-full"
-            style={{ border: '1px solid var(--noir-border-accent)' }}
-          >
-            <VideoTrack
-              trackRef={screenShareTrack}
-              className="h-full w-full object-contain"
+        <div className="session-visualizer flex h-[43vh] min-h-[250px] shrink-0 flex-col overflow-hidden border-b border-[var(--noir-border)]">
+          {screenShareTrack ? (
+            <div
+              className="h-full w-full"
+              style={{ border: '1px solid var(--noir-border-accent)' }}
+            >
+              <VideoTrack
+                trackRef={screenShareTrack}
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : (
+            <ReactShaderToy
+              fs={NOIR_SHADER}
+              uniforms={{ iAudioAmplitude: shaderAmplitude }}
+              className="h-full w-full"
+            />
+          )}
+        </div>
+
+        {supportsChatInput && chatOpen && (
+          <div className="session-transcript-pane min-h-0 flex-1 overflow-hidden">
+            <AgentChatTranscript
+              messages={messages}
+              agentState={agent.state}
+              agentName={agentConfig.displayName}
+              optimisticImages={optimisticImages}
             />
           </div>
-        ) : (
-          <ReactShaderToy
-            fs={NOIR_SHADER}
-            uniforms={{ iAudioAmplitude: shaderAmplitude }}
-            className="h-full w-full"
-          />
         )}
+
+        {isPreConnectBufferEnabled && messages.length === 0 && (
+          <div className="shrink-0 px-4 pb-2 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)]">
+            Agent is listening, ask it a question
+          </div>
+        )}
+
+        <AgentControlBar
+          variant={controlsVariant}
+          controls={controls}
+          isChatOpen={chatOpen}
+          onIsChatOpenChange={setChatOpen}
+          onDisconnect={handleDisconnect}
+          onFileUpload={handleFileUpload}
+        />
       </div>
-
-      {supportsChatInput && chatOpen && (
-        <div className="min-h-0 flex-1 overflow-hidden">
-          <AgentChatTranscript
-            messages={messages}
-            agentState={agent.state}
-            agentName={agentConfig.displayName}
-            optimisticImages={optimisticImages}
-          />
-        </div>
-      )}
-
-      {isPreConnectBufferEnabled && messages.length === 0 && (
-        <div className="shrink-0 px-4 pb-2 text-center text-xs text-[var(--text-muted)]">
-          Agent is listening, ask it a question
-        </div>
-      )}
-
-      <AgentControlBar
-        variant={controlsVariant}
-        controls={controls}
-        isChatOpen={chatOpen}
-        onIsChatOpenChange={setChatOpen}
-        onDisconnect={handleDisconnect}
-        onFileUpload={handleFileUpload}
-      />
 
       {uploadToast && (
         <div className="upload-toast">

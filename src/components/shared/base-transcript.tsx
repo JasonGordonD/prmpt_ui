@@ -216,7 +216,7 @@ export function BaseTranscript({
   return (
     <div className={`flex flex-col h-full min-h-0 ${className}`}>
       {/* Toolbar */}
-      <div className="transcript-actions flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--border)] shrink-0">
+      <div className="transcript-actions session-transcript-toolbar flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--border)] shrink-0">
         <button
           onClick={handleCopy}
           className="flex items-center gap-1.5 btn-interactive"
@@ -240,26 +240,28 @@ export function BaseTranscript({
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="h-full overflow-y-auto space-y-3 p-4 min-h-0"
+          className="session-transcript-scroll h-full overflow-y-auto min-h-0"
         >
-          {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-sm text-[var(--text-muted)] animate-pulse-subtle">
-                Waiting for conversation to begin...
-              </p>
-            </div>
-          )}
-          {messages.map((msg) => (
-            <div key={msg.id} className="animate-fade-in">
-              <MessageRenderer message={msg} agentName={agentName} />
-            </div>
-          ))}
-          {optimisticImages.map((src) => (
-            <div key={src} className="flex justify-end animate-fade-in">
-              <img src={src} alt="Uploaded preview" className="upload-preview" />
-            </div>
-          ))}
-          <TypingIndicator state={agentState} />
+          <div className="mx-auto w-full max-w-5xl space-y-3 px-5 py-4">
+            {messages.length === 0 && (
+              <div className="flex items-center justify-center h-full py-16">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] animate-pulse-subtle">
+                  Waiting for conversation to begin...
+                </p>
+              </div>
+            )}
+            {messages.map((msg) => (
+              <div key={msg.id} className="animate-fade-in">
+                <MessageRenderer message={msg} agentName={agentName} />
+              </div>
+            ))}
+            {optimisticImages.map((src) => (
+              <div key={src} className="flex justify-end animate-fade-in">
+                <img src={src} alt="Uploaded preview" className="upload-preview" />
+              </div>
+            ))}
+            <TypingIndicator state={agentState} />
+          </div>
         </div>
 
         <button

@@ -43,8 +43,8 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
   const currentNode = agent.attributes?.current_node || 'idle';
 
   return (
-    <div className={`status-bar flex h-10 min-h-10 items-center px-4 ${className}`}>
-      <div className="min-w-0 flex-1 overflow-hidden">
+    <div className={`status-bar grid h-10 min-h-10 grid-cols-[1fr_auto_1fr] items-center px-4 ${className}`}>
+      <div className="min-w-0 overflow-hidden">
         <div className="truncate font-mono text-[10px] uppercase tracking-[0.15em]">
           <span className="text-[var(--noir-text-muted)]">{agentConfig.displayName}</span>
           <span className="mx-2 text-[var(--noir-accent)]">·</span>
@@ -52,11 +52,11 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
         </div>
       </div>
 
-      <div className="mx-4 flex shrink-0 items-center justify-center">
+      <div className="mx-4 flex items-center justify-center">
         <StateIndicator state={agent.state} />
       </div>
 
-      <div className="font-mono text-[12px] uppercase tracking-[0.08em] text-[var(--noir-text-muted)] tabular-nums">
+      <div className="flex justify-end font-mono text-[12px] uppercase tracking-[0.08em] text-[var(--noir-text-muted)] tabular-nums">
         {timer}
       </div>
     </div>
