@@ -91,7 +91,7 @@ export function LandingPage() {
                   >
                     <div
                       className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: 'var(--noir-accent)' }}
+                      style={{ backgroundColor: agent.theme.primary }}
                     />
                     <div>
                       <div className="text-sm font-medium text-[var(--noir-text)]">{agent.displayName}</div>
