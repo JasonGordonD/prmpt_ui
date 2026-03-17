@@ -77,13 +77,17 @@ function DefaultMessageRenderer({ message, agentName }: MessageRendererProps) {
 
   if (!isAgent) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] space-y-1">
+      <div className="group flex justify-end">
+        <div className="max-w-[75%] space-y-1">
           <div className="flex items-center justify-end gap-2">
-            <span className="text-[11px] text-[var(--text-muted)] tabular-nums">{time}</span>
-            <span className="text-[11px] font-medium text-[var(--text-muted)]">{speaker}</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
+              {speaker}
+            </span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
+              {time}
+            </span>
           </div>
-          <div className="rounded-xl px-4 py-2.5 text-sm bg-[var(--primary)] text-white">
+          <div className="user-message">
             {text}
           </div>
         </div>
@@ -92,16 +96,16 @@ function DefaultMessageRenderer({ message, agentName }: MessageRendererProps) {
   }
 
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[85%] space-y-1">
+    <div className="group flex justify-start">
+      <div className="max-w-[80%] space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium uppercase text-[var(--primary)]">
-            {speaker}
+          <span className="agent-name-label">{speaker}</span>
+          <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
+            {time}
           </span>
-          <span className="text-[11px] text-[var(--text-muted)] tabular-nums">{time}</span>
         </div>
-        <div className="rounded-xl px-4 py-2.5 text-sm bg-[var(--surface)] text-[var(--text)] border border-[var(--border)]">
-          <div className="prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_code]:bg-[var(--bg)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[var(--primary)] [&_a]:text-[var(--primary)] [&_strong]:text-[var(--text)] [&_blockquote]:border-l-[var(--primary)]">
+        <div className="agent-message">
+          <div className="max-w-none text-[var(--noir-text)] [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-[700] [&_h1]:font-display [&_h1]:text-[1.7rem] [&_h1]:leading-tight [&_h1]:font-[600] [&_h2]:font-display [&_h2]:text-[1.35rem] [&_h2]:font-[600] [&_h3]:font-display [&_h3]:text-[1.15rem] [&_h3]:font-[600] [&_code]:font-mono [&_code]:bg-[var(--noir-bg-elevated)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_a]:text-[var(--noir-accent-bright)]">
             <MarkdownWithInlineMedia markdown={text} />
           </div>
         </div>

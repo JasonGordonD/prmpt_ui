@@ -22,7 +22,7 @@ export function AgentChatTranscript({
       messages={messages}
       agentState={agentState}
       agentName={agentName}
-      className={className}
+      className={`agent-chat-transcript ${className ?? ''}`.trim()}
     />
   );
 }
