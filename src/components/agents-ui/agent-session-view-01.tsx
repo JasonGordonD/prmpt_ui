@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Track } from 'livekit-client';
 import { VideoTrack, useAgent, useLocalParticipant, useSessionContext, useSessionMessages, useTrackVolume, useTracks, useVoiceAssistant } from '@livekit/components-react';
 import type { AgentConfig } from '@/lib/agents';
@@ -61,6 +61,8 @@ export function AgentSessionView({
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const [chatOpen, setChatOpen] = useState(true);
+  const [optimisticImages, setOptimisticImages] = useState<string[]>([]);
+  const [uploadToast, setUploadToast] = useState('');
 
   const agentTrackVolume = useTrackVolume(agentAudioTrack);
   const userTrackVolume = useTrackVolume(microphoneTrack?.track as never);
@@ -84,6 +86,24 @@ export function AgentSessionView({
     }
     await session.end();
   };
+
+  const handleFileUpload = async (file: File) => {
+    const room = session.room;
+    if (!room) return;
+    await room.localParticipant.sendFile(file, { topic: 'images' });
+    const objectUrl = URL.createObjectURL(file);
+    setOptimisticImages((images) => [...images, objectUrl]);
+    setUploadToast(`SENT TO ${agentConfig.displayName.toUpperCase()}`);
+    window.setTimeout(() => {
+      setUploadToast('');
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      optimisticImages.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [optimisticImages]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -115,6 +135,7 @@ export function AgentSessionView({
             messages={messages}
             agentState={agent.state}
             agentName={agentConfig.displayName}
+            optimisticImages={optimisticImages}
           />
         </div>
       )}
@@ -131,7 +152,14 @@ export function AgentSessionView({
         isChatOpen={chatOpen}
         onIsChatOpenChange={setChatOpen}
         onDisconnect={handleDisconnect}
+        onFileUpload={handleFileUpload}
       />
+
+      {uploadToast && (
+        <div className="upload-toast">
+          {uploadToast}
+        </div>
+      )}
     </div>
   );
 }

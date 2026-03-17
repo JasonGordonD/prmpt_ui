@@ -312,3 +312,29 @@ textarea:focus:not(:focus-visible) {
   opacity: 1;
   pointer-events: auto;
 }
+
+.upload-preview {
+  max-width: 220px;
+  max-height: 160px;
+  border-radius: 4px;
+  border: 1px solid var(--noir-border-mid);
+  align-self: flex-end;
+}
+
+.upload-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono-face), 'Courier Prime', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--noir-accent-bright);
+  background: var(--noir-bg-surface);
+  border: 1px solid var(--noir-border-accent);
+  border-radius: 999px;
+  padding: 8px 14px;
+  z-index: 20;
+  animation: fade-in-fast 0.2s ease-out;
+}

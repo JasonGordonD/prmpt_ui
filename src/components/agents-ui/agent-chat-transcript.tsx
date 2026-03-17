@@ -8,6 +8,7 @@ type AgentChatTranscriptProps = {
   messages: ReceivedMessage[];
   agentState?: AgentState;
   agentName?: string;
+  optimisticImages?: string[];
   className?: string;
 };
 
@@ -15,6 +16,7 @@ export function AgentChatTranscript({
   messages,
   agentState,
   agentName,
+  optimisticImages,
   className,
 }: AgentChatTranscriptProps) {
   return (
@@ -22,6 +24,7 @@ export function AgentChatTranscript({
       messages={messages}
       agentState={agentState}
       agentName={agentName}
+      optimisticImages={optimisticImages}
       className={`agent-chat-transcript ${className ?? ''}`.trim()}
     />
   );

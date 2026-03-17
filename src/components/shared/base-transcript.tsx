@@ -17,6 +17,7 @@ type BaseTranscriptProps = {
   messages: ReceivedMessage[];
   agentState?: AgentState;
   agentName?: string;
+  optimisticImages?: string[];
   messageRenderer?: React.ComponentType<MessageRendererProps>;
   className?: string;
 };
@@ -141,6 +142,7 @@ export function BaseTranscript({
   messages,
   agentState,
   agentName,
+  optimisticImages = [],
   messageRenderer: MessageRenderer = DefaultMessageRenderer,
   className = '',
 }: BaseTranscriptProps) {
@@ -250,6 +252,11 @@ export function BaseTranscript({
           {messages.map((msg) => (
             <div key={msg.id} className="animate-fade-in">
               <MessageRenderer message={msg} agentName={agentName} />
+            </div>
+          ))}
+          {optimisticImages.map((src) => (
+            <div key={src} className="flex justify-end animate-fade-in">
+              <img src={src} alt="Uploaded preview" className="upload-preview" />
             </div>
           ))}
           <TypingIndicator state={agentState} />
