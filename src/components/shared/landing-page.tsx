@@ -59,11 +59,13 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen text-[var(--noir-text)] flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-[400px] space-y-8">
         <div className="text-center space-y-3">
-          <h1 className="text-4xl font-bold tracking-tight text-[#ededed]">PRMPT</h1>
-          <p className="text-[#888] text-sm">Voice AI Agent Platform</p>
+          <h1 className="text-5xl font-semibold tracking-tight text-[var(--noir-text)] font-display">PRMPT</h1>
+          <p className="text-[var(--noir-text-muted)] text-xs uppercase tracking-[0.18em] font-mono">
+            Voice AI Agent Platform
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -71,29 +73,29 @@ export function LandingPage() {
           <div className="relative">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1a1a] border border-[#333] rounded-xl text-left btn-interactive"
+              className="w-full flex items-center justify-between px-4 py-3 bg-[var(--noir-bg-card)] border border-[var(--noir-border-mid)] rounded-xl text-left btn-interactive"
             >
-              <span className={selectedAgent ? 'text-[#ededed]' : 'text-[#666]'}>
+              <span className={selectedAgent ? 'text-[var(--noir-text)]' : 'text-[var(--noir-text-dim)]'}>
                 {selectedAgent ? selectedAgent.displayName : 'Select an agent...'}
               </span>
-              <ChevronDown className={`w-4 h-4 text-[#666] transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-[var(--noir-text-dim)] transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {dropdownOpen && (
-              <div className="absolute z-10 w-full mt-1 bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden shadow-xl animate-fade-in">
+              <div className="absolute z-10 w-full mt-1 bg-[var(--noir-bg-card)] border border-[var(--noir-border-mid)] rounded-xl overflow-hidden shadow-xl animate-fade-in">
                 {AGENTS.map((agent) => (
                   <button
                     key={agent.id}
                     onClick={() => handleSelect(agent)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#252525] transition-colors text-left btn-interactive"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--noir-bg-elevated)] transition-colors text-left btn-interactive"
                   >
                     <div
                       className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: agent.theme.primary }}
+                      style={{ backgroundColor: 'var(--noir-accent)' }}
                     />
                     <div>
-                      <div className="text-sm font-medium text-[#ededed]">{agent.displayName}</div>
-                      <div className="text-xs text-[#888]">{agent.description}</div>
+                      <div className="text-sm font-medium text-[var(--noir-text)]">{agent.displayName}</div>
+                      <div className="text-xs text-[var(--noir-text-muted)]">{agent.description}</div>
                     </div>
                   </button>
                 ))}
@@ -107,9 +109,9 @@ export function LandingPage() {
               <div
                 className="px-4 py-3 rounded-xl border text-sm"
                 style={{
-                  backgroundColor: selectedAgent.theme.surface,
-                  borderColor: selectedAgent.theme.border,
-                  color: selectedAgent.theme.textMuted,
+                  backgroundColor: 'var(--noir-bg-surface)',
+                  borderColor: 'var(--noir-border)',
+                  color: 'var(--noir-text-muted)',
                 }}
               >
                 {selectedAgent.description}
@@ -122,13 +124,13 @@ export function LandingPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter password"
-                    className="w-full px-4 py-3 pr-11 bg-[#1a1a1a] border border-[#333] rounded-xl text-[#ededed] placeholder-[#555] transition-colors"
+                    className="w-full px-4 py-3 pr-11 bg-[var(--noir-bg-card)] border border-[var(--noir-border)] rounded-xl text-[var(--noir-text)] placeholder-[var(--noir-text-dim)] transition-colors"
                     autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-[#999] transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--noir-text-dim)] hover:text-[var(--noir-text-muted)] transition-colors"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -142,8 +144,7 @@ export function LandingPage() {
                 <button
                   type="submit"
                   disabled={loading || !password}
-                  className="w-full py-3 rounded-lg font-medium text-white btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{ backgroundColor: selectedAgent.theme.primary }}
+                  className="w-full py-3 rounded-lg font-mono text-xs uppercase tracking-[0.16em] border border-[var(--noir-accent)] text-[var(--noir-accent-bright)] bg-transparent hover:bg-[var(--noir-accent-dim)] btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -159,7 +160,7 @@ export function LandingPage() {
           )}
         </div>
 
-        <p className="text-center text-[#444] text-xs">
+        <p className="text-center text-[var(--noir-text-dim)] text-xs font-mono uppercase tracking-[0.12em]">
           Powered by PRMPT
         </p>
       </div>

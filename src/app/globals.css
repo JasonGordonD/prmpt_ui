@@ -1,28 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --bg: #0a0a0a;
-  --surface: #1a1a1a;
-  --primary: #888;
-  --accent: #666;
-  --text: #ededed;
-  --text-muted: #999;
-  --border: #333;
+  --noir-bg: #07070a;
+  --noir-bg-surface: #0d0d12;
+  --noir-bg-elevated: #14141c;
+  --noir-bg-card: #1a1a24;
+
+  --noir-accent: #8b1a1a;
+  --noir-accent-bright: #c0392b;
+  --noir-accent-dim: #3d0d0d;
+  --noir-accent-glow: rgba(139, 26, 26, 0.15);
+
+  --noir-text: #e8e0d5;
+  --noir-text-muted: #8a8280;
+  --noir-text-dim: #4a4845;
+
+  --noir-border: #1e1e2a;
+  --noir-border-mid: #2a2a38;
+  --noir-border-accent: #4a1515;
+
+  --noir-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+
+  /* Backward-compatible aliases */
+  --background: var(--noir-bg);
+  --foreground: var(--noir-text);
+  --bg: var(--noir-bg);
+  --surface: var(--noir-bg-surface);
+  --primary: var(--noir-accent);
+  --accent: var(--noir-accent-bright);
+  --text: var(--noir-text);
+  --text-muted: var(--noir-text-muted);
+  --border: var(--noir-border);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body-face);
+  --font-mono: var(--font-mono-face);
 }
 
 body {
-  background: var(--bg, #0a0a0a);
-  color: var(--text, #ededed);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background:
+    var(--noir-grain),
+    radial-gradient(ellipse 80% 60% at 15% 40%, rgba(139, 26, 26, 0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 85% 10%, rgba(20, 10, 40, 0.08) 0%, transparent 70%),
+    var(--noir-bg);
+  background-blend-mode: overlay, normal, normal, normal;
+  color: var(--noir-text);
+  font-family: var(--font-body-face), Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* Scrollbar */
@@ -55,6 +81,10 @@ textarea:focus:not(:focus-visible) {
 
 /* Tabular numbers for timestamps and timers */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+.font-display { font-family: var(--font-display-face), 'Cormorant Garamond', serif; }
+.font-body { font-family: var(--font-body-face), Inter, system-ui, sans-serif; }
+.font-mono { font-family: var(--font-mono-face), 'Courier Prime', ui-monospace, monospace; }
 
 /* Animations */
 @keyframes pulse-subtle {
