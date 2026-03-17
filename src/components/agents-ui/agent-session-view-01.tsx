@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useAgent, useLocalParticipant, useSessionContext, useSessionMessages, useTrackVolume, useVoiceAssistant } from '@livekit/components-react';
+import { Track } from 'livekit-client';
+import { VideoTrack, useAgent, useLocalParticipant, useSessionContext, useSessionMessages, useTrackVolume, useTracks, useVoiceAssistant } from '@livekit/components-react';
 import type { AgentConfig } from '@/lib/agents';
 import { StatusBar } from '@/components/shared/status-bar';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
@@ -56,6 +57,7 @@ export function AgentSessionView({
   const agent = useAgent();
   const { audioTrack: agentAudioTrack } = useVoiceAssistant();
   const { microphoneTrack } = useLocalParticipant();
+  const [screenShareTrack] = useTracks([Track.Source.ScreenShare]);
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const [chatOpen, setChatOpen] = useState(true);
@@ -88,11 +90,23 @@ export function AgentSessionView({
       <StatusBar agentConfig={agentConfig} />
 
       <div className="flex h-[40vh] min-h-[220px] shrink-0 flex-col overflow-hidden border-b border-[var(--border)]">
-        <ReactShaderToy
-          fs={NOIR_SHADER}
-          uniforms={{ iAudioAmplitude: shaderAmplitude }}
-          className="h-full w-full"
-        />
+        {screenShareTrack ? (
+          <div
+            className="h-full w-full"
+            style={{ border: '1px solid var(--noir-border-accent)' }}
+          >
+            <VideoTrack
+              trackRef={screenShareTrack}
+              className="h-full w-full object-contain"
+            />
+          </div>
+        ) : (
+          <ReactShaderToy
+            fs={NOIR_SHADER}
+            uniforms={{ iAudioAmplitude: shaderAmplitude }}
+            className="h-full w-full"
+          />
+        )}
       </div>
 
       {supportsChatInput && chatOpen && (
