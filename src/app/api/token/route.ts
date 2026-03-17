@@ -69,12 +69,13 @@ export async function POST(req: NextRequest) {
       canSubscribe: true,
     });
 
-    // Only add explicit agent dispatch if agentName is provided.
-    // Agents using auto-dispatch (no agent_name registered) don't need this —
-    // they automatically join any new room on their LiveKit project.
-    if (agentName) {
+    // Resolve agent name: prefer explicit request body value, fall back to agent config.
+    const resolvedAgentName = agentName || agent.agentName;
+
+    // Only add explicit agent dispatch if an agent name is available.
+    if (resolvedAgentName) {
       const dispatch = new RoomAgentDispatch();
-      dispatch.agentName = agentName;
+      dispatch.agentName = resolvedAgentName;
       if (metadata && Object.keys(metadata).length > 0) {
         dispatch.metadata = JSON.stringify(metadata);
       }
