@@ -14,7 +14,7 @@ type VisualizerType = 'aura' | 'wave' | 'radial' | 'bar' | 'grid';
 type VisualizerWrapperProps = {
   audioTrack?: TrackReference;
   state?: AgentState;
-  color?: string;
+  color?: `#${string}`;
   colorShift?: number;
   agentId?: string;
   className?: string;
