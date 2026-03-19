@@ -30,11 +30,22 @@ export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
   messages?: ReceivedMessage[];
   /** Locally uploaded files shown in the live timeline. */
   uploadedItems?: UploadTimelineItem[];
+  /** Raw received image URLs from the image_egress topic. */
+  receivedImages?: string[];
+  /** Generated image metadata used for timeline positioning. */
+  generatedImages?: GeneratedImageTimelineItem[];
   /**
    * Additional CSS class names to apply to the conversation container.
    */
   className?: string;
 }
+
+export type GeneratedImageTimelineItem = {
+  id: string;
+  url: string;
+  timestamp: number;
+  triggerMessageId: string | null;
+};
 
 type TimelineEntry =
   | {
@@ -49,6 +60,12 @@ type TimelineEntry =
       id: string;
       timestamp: number;
       item: UploadTimelineItem;
+    }
+  | {
+      kind: 'generated-image';
+      id: string;
+      timestamp: number;
+      item: GeneratedImageTimelineItem;
     };
 
 function formatTimestamp(ts: number) {
@@ -67,8 +84,11 @@ function serializeTimelinePlain(entries: TimelineEntry[]) {
         const speaker = entry.from === 'user' ? 'You' : 'Agent';
         return `[${formatTimestamp(entry.timestamp)}] ${speaker}: ${entry.text}`;
       }
-      const uploadStatus = entry.item.status === 'failed' ? 'FAILED' : entry.item.status === 'uploading' ? 'UPLOADING' : 'SENT';
-      return `[${formatTimestamp(entry.timestamp)}] ${entry.item.senderLabel ?? 'You'} uploaded ${entry.item.name} (${uploadStatus})`;
+      if (entry.kind === 'upload') {
+        const uploadStatus = entry.item.status === 'failed' ? 'FAILED' : entry.item.status === 'uploading' ? 'UPLOADING' : 'SENT';
+        return `[${formatTimestamp(entry.timestamp)}] ${entry.item.senderLabel ?? 'You'} uploaded ${entry.item.name} (${uploadStatus})`;
+      }
+      return `[${formatTimestamp(entry.timestamp)}] Agent generated image: ${entry.item.url}`;
     })
     .join('\n\n');
 }
@@ -79,8 +99,11 @@ function serializeTimelineMarkdown(entries: TimelineEntry[]) {
       const speaker = entry.from === 'user' ? 'You' : 'Agent';
       return `**[${formatTimestamp(entry.timestamp)}] ${speaker}:** ${entry.text}`;
     }
-    const uploadStatus = entry.item.status === 'failed' ? 'failed' : entry.item.status === 'uploading' ? 'uploading' : 'sent';
-    return `**[${formatTimestamp(entry.timestamp)}] ${entry.item.senderLabel ?? 'You'} uploaded:** ${entry.item.name} _(${uploadStatus})_`;
+    if (entry.kind === 'upload') {
+      const uploadStatus = entry.item.status === 'failed' ? 'failed' : entry.item.status === 'uploading' ? 'uploading' : 'sent';
+      return `**[${formatTimestamp(entry.timestamp)}] ${entry.item.senderLabel ?? 'You'} uploaded:** ${entry.item.name} _(${uploadStatus})_`;
+    }
+    return `**[${formatTimestamp(entry.timestamp)}] Agent generated image:** ${entry.item.url}`;
   });
 
   return `# Live Session Timeline\n\n${lines.join('\n\n')}`;
@@ -105,10 +128,13 @@ export function AgentChatTranscript({
   agentState,
   messages = [],
   uploadedItems = [],
+  receivedImages = [],
+  generatedImages = [],
   className,
   ...props
 }: AgentChatTranscriptProps) {
   const [copied, setCopied] = useState(false);
+  const [failedGeneratedImageIds, setFailedGeneratedImageIds] = useState<string[]>([]);
   const timelineEntries = useMemo<TimelineEntry[]>(() => {
     const messageEntries = messages.map((receivedMessage) => {
       const from: 'user' | 'assistant' = receivedMessage.from?.isLocal ? 'user' : 'assistant';
@@ -128,8 +154,49 @@ export function AgentChatTranscript({
       item,
     }));
 
-    return [...messageEntries, ...uploadEntries].sort((a, b) => a.timestamp - b.timestamp);
-  }, [messages, uploadedItems]);
+    const baseTimeline = [...messageEntries, ...uploadEntries].sort((a, b) => a.timestamp - b.timestamp);
+    const generatedImageEntries = [...generatedImages].sort((a, b) => a.timestamp - b.timestamp);
+
+    const generatedByMessageId = new Map<string, GeneratedImageTimelineItem[]>();
+    const unanchored: GeneratedImageTimelineItem[] = [];
+
+    for (const generatedImage of generatedImageEntries) {
+      if (!generatedImage.triggerMessageId) {
+        unanchored.push(generatedImage);
+        continue;
+      }
+      const bucket = generatedByMessageId.get(generatedImage.triggerMessageId) ?? [];
+      bucket.push(generatedImage);
+      generatedByMessageId.set(generatedImage.triggerMessageId, bucket);
+    }
+
+    const combined: TimelineEntry[] = [];
+    for (const entry of baseTimeline) {
+      combined.push(entry);
+      if (entry.kind === 'message') {
+        const linkedImages = generatedByMessageId.get(entry.id) ?? [];
+        for (const linkedImage of linkedImages) {
+          combined.push({
+            kind: 'generated-image',
+            id: linkedImage.id,
+            timestamp: linkedImage.timestamp,
+            item: linkedImage,
+          });
+        }
+      }
+    }
+
+    for (const image of unanchored) {
+      combined.push({
+        kind: 'generated-image',
+        id: image.id,
+        timestamp: image.timestamp,
+        item: image,
+      });
+    }
+
+    return combined;
+  }, [generatedImages, messages, uploadedItems]);
 
   const handleCopy = useCallback(async () => {
     if (timelineEntries.length === 0) return;
@@ -234,6 +301,44 @@ export function AgentChatTranscript({
             );
           }
 
+          if (entry.kind === 'generated-image') {
+            const hasFailedToLoad = failedGeneratedImageIds.includes(entry.id);
+
+            return (
+              <Message key={entry.id} title={formatTimestamp(entry.timestamp)} from="assistant">
+                <MessageContent className="w-full min-w-[260px] max-w-[min(520px,95vw)] rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+                  <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    <span>Agent generated image</span>
+                    <span>{formatTimestamp(entry.timestamp)}</span>
+                  </div>
+
+                  {!hasFailedToLoad ? (
+                    <a
+                      href={entry.item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block animate-fade-in overflow-hidden rounded-lg border border-[var(--border)]"
+                    >
+                      <img
+                        src={entry.item.url}
+                        alt="Agent generated image"
+                        className="max-h-72 w-full object-contain bg-black/40"
+                        onError={() => {
+                          console.warn('Failed to load generated image URL', entry.item.url);
+                          setFailedGeneratedImageIds((prev) => (prev.includes(entry.id) ? prev : [...prev, entry.id]));
+                        }}
+                      />
+                    </a>
+                  ) : (
+                    <p className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                      Image unavailable.
+                    </p>
+                  )}
+                </MessageContent>
+              </Message>
+            );
+          }
+
           return (
             <Message key={entry.id} title={formatTimestamp(entry.timestamp)} from={entry.from}>
               <MessageContent>
@@ -249,6 +354,11 @@ export function AgentChatTranscript({
         </AnimatePresence>
       </ConversationContent>
       <ConversationScrollButton />
+      {receivedImages.length > 0 && (
+        <span className="sr-only" aria-hidden="true">
+          {receivedImages.length}
+        </span>
+      )}
     </Conversation>
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
 import { useAgent, useSessionContext, useSessionMessages } from '@livekit/components-react';
-import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
+import { type DataPacket_Kind, type RemoteParticipant, RoomEvent } from 'livekit-client';
+import { AgentChatTranscript, type GeneratedImageTimelineItem } from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
   type AgentControlBarControls,
@@ -181,8 +182,11 @@ export function AgentSessionView_01({
 }: React.ComponentProps<'section'> & AgentSessionView_01Props) {
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
+  const messagesRef = useRef(messages);
   const [chatOpen, setChatOpen] = useState(false);
   const [uploadedItems, setUploadedItems] = useState<UploadTimelineItem[]>([]);
+  const [receivedImages, setReceivedImages] = useState<string[]>([]);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImageTimelineItem[]>([]);
   const { state: agentState } = useAgent();
 
   const controls: AgentControlBarControls = {
@@ -204,6 +208,72 @@ export function AgentSessionView_01({
     });
   };
 
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    const room = session.room;
+    if (!room) return;
+
+    const handleDataReceived = (
+      payload: Uint8Array,
+      _participant?: RemoteParticipant,
+      _kind?: DataPacket_Kind,
+      topic?: string,
+    ) => {
+      if (topic !== 'image_egress') {
+        return;
+      }
+
+      try {
+        const decoded = new TextDecoder().decode(payload);
+        const parsed = JSON.parse(decoded) as { type?: string; url?: string };
+        if (parsed.type !== 'image_url' || typeof parsed.url !== 'string') {
+          return;
+        }
+
+        const url = parsed.url.trim();
+        if (!url) {
+          return;
+        }
+
+        const latestAgentMessage = [...messagesRef.current]
+          .reverse()
+          .find((message) => !message.from?.isLocal);
+
+        setReceivedImages((prev) => [...prev, url]);
+        setGeneratedImages((prev) => [
+          ...prev,
+          {
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : `generated-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            url,
+            timestamp: Date.now(),
+            triggerMessageId: latestAgentMessage?.id ?? null,
+          },
+        ]);
+      } catch (error) {
+        console.warn('Ignoring malformed image_egress payload', error);
+      }
+    };
+
+    const handleDisconnected = () => {
+      setReceivedImages([]);
+      setGeneratedImages([]);
+    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    room.on(RoomEvent.Disconnected, handleDisconnected);
+
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+      room.off(RoomEvent.Disconnected, handleDisconnected);
+    };
+  }, [session.room]);
+
   return (
     <section
       ref={ref}
@@ -224,6 +294,8 @@ export function AgentSessionView_01({
                 agentState={agentState}
                 messages={messages}
                 uploadedItems={uploadedItems}
+                receivedImages={receivedImages}
+                generatedImages={generatedImages}
                 className="mx-auto h-full w-full max-w-2xl [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-20 md:[&>div>div]:px-6"
               />
             </motion.div>
