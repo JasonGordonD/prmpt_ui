@@ -36,7 +36,6 @@ export default function RootLayout({
         className={`${cormorant.variable} ${courier.variable} ${inter.variable} antialiased`}
       >
         {children}
-        <SpeedInsights />
       </body>
     </html>
   );

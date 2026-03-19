@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAgent, useSessionMessages, useSessionContext } from '@livekit/components-react';
+import { useRouter } from 'next/navigation';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import type { AgentConfig } from '@/lib/agents';
 import type { AgentState } from '@livekit/components-react';
@@ -64,7 +65,7 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
   // The initial useAgent state is 'disconnected' with isFinished=true, isPending=false.
   // We must NOT treat that as "session finished" — it's just the pre-connection state.
   // Show a full pre-connect noir screen before the user starts the session.
-  if (!hasEverConnected && agent.state === 'disconnected') {
+  if (!hasStartedConnecting && agent.state === 'disconnected') {
     return (
       <div className="relative flex h-screen items-center justify-center overflow-hidden">
         <ReactShaderToy
