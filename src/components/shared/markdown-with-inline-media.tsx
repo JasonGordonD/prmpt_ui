@@ -19,6 +19,7 @@ const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|webp)$/i;
 const VIDEO_EXTENSIONS = /\.(mp4|webm|mov)$/i;
 
 const KNOWN_IMAGE_HOST_SUFFIXES = [
+  'api.x.ai',
   'images.unsplash.com',
   'i.imgur.com',
   'imgur.com',

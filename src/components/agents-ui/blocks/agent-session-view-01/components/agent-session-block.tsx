@@ -256,39 +256,18 @@ export function AgentSessionView_01({
       _kind?: DataPacket_Kind,
       topic?: string,
     ) => {
+      if (topic !== 'image_egress') {
+        return;
+      }
+
       try {
         const decoded = new TextDecoder().decode(payload);
-        let parsedUrl: string | null = null;
-        let parsedType: string | undefined;
-
-        try {
-          const parsed = JSON.parse(decoded) as { type?: string; url?: string; image_url?: string };
-          parsedType = typeof parsed.type === 'string' ? parsed.type : undefined;
-          parsedUrl =
-            typeof parsed.url === 'string'
-              ? parsed.url
-              : typeof parsed.image_url === 'string'
-                ? parsed.image_url
-                : null;
-        } catch {
-          parsedType = undefined;
-          parsedUrl = decoded;
-        }
-
-        const normalizedType = parsedType?.toLowerCase().trim();
-        const isImageType =
-          normalizedType === undefined ||
-          normalizedType === 'image_url' ||
-          normalizedType === 'image-url' ||
-          normalizedType === 'image';
-        const isPreferredTopic = topic === 'image_egress';
-        const isNoTopic = topic === undefined || topic === '';
-
-        if (!parsedUrl || !isImageType || (!isPreferredTopic && !isNoTopic)) {
+        const parsed = JSON.parse(decoded) as { type?: string; url?: string };
+        if (parsed.type !== 'image_url' || typeof parsed.url !== 'string') {
           return;
         }
 
-        const url = parsedUrl.trim();
+        const url = parsed.url.trim();
         if (!url) {
           return;
         }
