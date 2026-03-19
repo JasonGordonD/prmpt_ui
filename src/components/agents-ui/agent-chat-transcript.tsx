@@ -110,13 +110,16 @@ export function AgentChatTranscript({
 }: AgentChatTranscriptProps) {
   const [copied, setCopied] = useState(false);
   const timelineEntries = useMemo<TimelineEntry[]>(() => {
-    const messageEntries = messages.map((receivedMessage) => ({
-      kind: 'message' as const,
-      id: receivedMessage.id,
-      timestamp: receivedMessage.timestamp,
-      from: receivedMessage.from?.isLocal ? 'user' : 'assistant',
-      text: receivedMessage.message ?? '',
-    }));
+    const messageEntries = messages.map((receivedMessage) => {
+      const from: 'user' | 'assistant' = receivedMessage.from?.isLocal ? 'user' : 'assistant';
+      return {
+        kind: 'message' as const,
+        id: receivedMessage.id,
+        timestamp: receivedMessage.timestamp,
+        from,
+        text: receivedMessage.message ?? '',
+      };
+    });
 
     const uploadEntries = uploadedItems.map((item) => ({
       kind: 'upload' as const,
