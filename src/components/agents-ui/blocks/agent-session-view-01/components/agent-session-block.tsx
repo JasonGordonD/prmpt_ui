@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
 import { useAgent, useSessionContext, useSessionMessages } from '@livekit/components-react';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
   type AgentControlBarControls,
+  type UploadTimelineItem,
 } from '@/components/agents-ui/agent-control-bar';
 import { Shimmer } from '@/components/ai-elements/shimmer';
 import { cn } from '@/lib/utils';
@@ -181,7 +182,7 @@ export function AgentSessionView_01({
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const [chatOpen, setChatOpen] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [uploadedItems, setUploadedItems] = useState<UploadTimelineItem[]>([]);
   const { state: agentState } = useAgent();
 
   const controls: AgentControlBarControls = {
@@ -190,16 +191,18 @@ export function AgentSessionView_01({
     chat: supportsChatInput,
     camera: supportsVideoInput,
     screenShare: supportsScreenShare,
+    upload: true,
   };
 
-  useEffect(() => {
-    const lastMessage = messages.at(-1);
-    const lastMessageIsLocal = lastMessage?.from?.isLocal === true;
-
-    if (scrollAreaRef.current && lastMessageIsLocal) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-    }
-  }, [messages]);
+  const handleUploadItemChange = (nextItem: UploadTimelineItem) => {
+    setUploadedItems((current) => {
+      const existing = current.find((item) => item.id === nextItem.id);
+      if (existing) {
+        return current.map((item) => (item.id === nextItem.id ? { ...item, ...nextItem } : item));
+      }
+      return [...current, nextItem];
+    });
+  };
 
   return (
     <section
@@ -207,10 +210,10 @@ export function AgentSessionView_01({
       className={cn('bg-background relative z-10 h-full w-full overflow-hidden', className)}
       {...props}
     >
-      <Fade top className="absolute inset-x-4 top-0 z-10 h-40" />
+      <Fade top className="absolute inset-x-4 top-0 z-20 h-40" />
       {/* transcript */}
 
-      <div className="absolute top-0 bottom-[135px] flex w-full flex-col md:bottom-[170px]">
+      <div className="pointer-events-auto absolute top-0 bottom-[135px] z-30 flex w-full flex-col md:bottom-[170px]">
         <AnimatePresence>
           {chatOpen && (
             <motion.div
@@ -220,7 +223,8 @@ export function AgentSessionView_01({
               <AgentChatTranscript
                 agentState={agentState}
                 messages={messages}
-                className="mx-auto w-full max-w-2xl [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-40 md:[&>div>div]:px-6"
+                uploadedItems={uploadedItems}
+                className="mx-auto h-full w-full max-w-2xl [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-20 md:[&>div>div]:px-6"
               />
             </motion.div>
           )}
@@ -269,6 +273,7 @@ export function AgentSessionView_01({
             isConnected={session.isConnected}
             onDisconnect={onDisconnect ?? session.end}
             onIsChatOpenChange={setChatOpen}
+            onUploadItemChange={handleUploadItemChange}
           />
         </div>
       </motion.div>

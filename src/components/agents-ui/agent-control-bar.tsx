@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import { useChat } from '@livekit/components-react';
+import { useChat, useSessionContext } from '@livekit/components-react';
 import { Track } from 'livekit-client';
-import { Loader, MessageSquareTextIcon, SendHorizontal } from 'lucide-react';
+import { Loader, MessageSquareTextIcon, Paperclip, SendHorizontal } from 'lucide-react';
 import { motion, type MotionProps } from 'motion/react';
 
 import { cn } from '@/lib/utils';
@@ -60,6 +60,25 @@ const MOTION_PROPS: MotionProps = {
     duration: 0.3,
     ease: 'easeOut',
   },
+};
+
+const ACCEPTED_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain'];
+
+function createUploadId() {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `upload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export type UploadTimelineItem = {
+  id: string;
+  name: string;
+  mimeType: string;
+  timestamp: number;
+  status: 'uploading' | 'sent' | 'failed';
+  previewUrl?: string;
+  senderLabel?: string;
+  errorMessage?: string;
 };
 
 interface AgentChatInputProps {
@@ -167,6 +186,12 @@ export interface AgentControlBarControls {
    * @defaultValue true (if data publish permission is granted)
    */
   chat?: boolean;
+  /**
+   * Whether to show file upload control.
+   *
+   * @defaultValue true (if data publish permission is granted)
+   */
+  upload?: boolean;
 }
 
 export interface AgentControlBarProps extends UseInputControlsProps {
@@ -214,6 +239,8 @@ export interface AgentControlBarProps extends UseInputControlsProps {
   onIsChatOpenChange?: (open: boolean) => void;
   /** The callback for when a device error occurs. */
   onDeviceError?: (error: { source: Track.Source; error: Error }) => void;
+  /** Callback for timeline upload item state changes. */
+  onUploadItemChange?: (item: UploadTimelineItem) => void;
 }
 
 /**
@@ -249,11 +276,15 @@ export function AgentControlBar({
   onDisconnect,
   onDeviceError,
   onIsChatOpenChange,
+  onUploadItemChange,
   className,
   ...props
 }: AgentControlBarProps & ComponentProps<'div'>) {
   const { send } = useChat();
+  const session = useSessionContext();
   const publishPermissions = usePublishPermissions();
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'sent' | 'failed'>('idle');
   const [isChatOpenUncontrolled, setIsChatOpenUncontrolled] = useState(isChatOpen);
   const {
     microphoneTrack,
@@ -276,6 +307,7 @@ export function AgentControlBar({
     screenShare: controls?.screenShare ?? publishPermissions.screenShare,
     camera: controls?.camera ?? publishPermissions.camera,
     chat: controls?.chat ?? publishPermissions.data,
+    upload: controls?.upload ?? publishPermissions.data,
   };
 
   const isEmpty = Object.values(visibleControls).every((value) => !value);
@@ -284,6 +316,60 @@ export function AgentControlBar({
     console.warn('AgentControlBar: `visibleControls` contains only false values.');
     return null;
   }
+
+  const handleFileUpload = async (file: File) => {
+    if (!ACCEPTED_UPLOAD_TYPES.includes(file.type) || !session.room || !isConnected) {
+      return;
+    }
+
+    const uploadId = createUploadId();
+    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
+    const timestamp = Date.now();
+
+    const baseItem: UploadTimelineItem = {
+      id: uploadId,
+      name: file.name,
+      mimeType: file.type,
+      timestamp,
+      previewUrl,
+      senderLabel: 'You',
+      status: 'uploading',
+    };
+
+    onUploadItemChange?.(baseItem);
+    setUploadStatus('uploading');
+
+    try {
+      await session.room.localParticipant.sendFile(file, {
+        mimeType: file.type,
+        topic: 'files',
+      });
+
+      onUploadItemChange?.({
+        ...baseItem,
+        status: 'sent',
+      });
+      setUploadStatus('sent');
+    } catch {
+      onUploadItemChange?.({
+        ...baseItem,
+        status: 'failed',
+        errorMessage: 'Upload failed. Please try again.',
+      });
+      setUploadStatus('failed');
+    } finally {
+      window.setTimeout(() => setUploadStatus('idle'), 1800);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleUploadInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await handleFileUpload(file);
+  };
 
   return (
     <div
@@ -310,6 +396,15 @@ export function AgentControlBar({
 
       <div className="flex gap-1">
         <div className="flex grow gap-1">
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept={ACCEPTED_UPLOAD_TYPES.join(',')}
+            onChange={(event) => {
+              void handleUploadInputChange(event);
+            }}
+            className="hidden"
+          />
           {/* Toggle Microphone */}
           {visibleControls.microphone && (
             <AgentTrackControl
@@ -383,6 +478,34 @@ export function AgentControlBar({
               })}
             >
               <MessageSquareTextIcon />
+            </Toggle>
+          )}
+
+          {/* Upload File */}
+          {visibleControls.upload && (
+            <Toggle
+              variant={variant === 'outline' ? 'outline' : 'default'}
+              pressed={uploadStatus === 'uploading'}
+              disabled={!isConnected || uploadStatus === 'uploading'}
+              aria-label="Upload file"
+              onPressedChange={() => {
+                uploadInputRef.current?.click();
+              }}
+              className={agentTrackToggleVariants({
+                variant: variant === 'outline' ? 'outline' : 'default',
+                className: cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full']),
+              })}
+              title={
+                uploadStatus === 'uploading'
+                  ? 'Uploading...'
+                  : uploadStatus === 'sent'
+                    ? 'Upload complete'
+                    : uploadStatus === 'failed'
+                      ? 'Upload failed'
+                      : 'Upload file'
+              }
+            >
+              {uploadStatus === 'uploading' ? <Loader className="animate-spin" /> : <Paperclip />}
             </Toggle>
           )}
         </div>
