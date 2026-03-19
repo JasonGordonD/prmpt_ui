@@ -1,9 +1,11 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useMemo, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { type AgentState, type ReceivedMessage } from '@livekit/components-react';
 import { Check, Copy, Download, FileText } from 'lucide-react';
+import type { TrackReference } from '@livekit/components-core';
+import { Track } from 'livekit-client';
 import {
   Conversation,
   ConversationContent,
@@ -34,6 +36,8 @@ export interface AgentChatTranscriptProps extends ComponentProps<'div'> {
   receivedImages?: string[];
   /** Generated image metadata used for timeline positioning. */
   generatedImages?: GeneratedImageTimelineItem[];
+  /** Active ingress-backed video tracks (identity prefix "video-"). */
+  ingressVideoTracks?: IngressVideoTrackItem[];
   /**
    * Additional CSS class names to apply to the conversation container.
    */
@@ -45,6 +49,12 @@ export type GeneratedImageTimelineItem = {
   url: string;
   timestamp: number;
   triggerMessageId: string | null;
+};
+
+export type IngressVideoTrackItem = {
+  id: string;
+  title?: string;
+  trackRef: TrackReference;
 };
 
 type TimelineEntry =
@@ -130,6 +140,7 @@ export function AgentChatTranscript({
   uploadedItems = [],
   receivedImages = [],
   generatedImages = [],
+  ingressVideoTracks = [],
   className,
   ...props
 }: AgentChatTranscriptProps) {
@@ -354,6 +365,13 @@ export function AgentChatTranscript({
             </Message>
           );
         })}
+        {ingressVideoTracks.map((ingressVideoTrack) => (
+          <IngressVideoMessage
+            key={ingressVideoTrack.id}
+            title={ingressVideoTrack.title}
+            trackRef={ingressVideoTrack.trackRef}
+          />
+        ))}
         <AnimatePresence>
           {agentState === 'thinking' && <AgentChatIndicator size="sm" />}
         </AnimatePresence>
@@ -365,5 +383,66 @@ export function AgentChatTranscript({
         </span>
       )}
     </Conversation>
+  );
+}
+
+function IngressVideoMessage({
+  title,
+  trackRef,
+}: {
+  title?: string;
+  trackRef: TrackReference;
+}) {
+  const publicationTrack = trackRef.publication.track;
+  const videoTrack = publicationTrack?.kind === Track.Kind.Video ? publicationTrack : undefined;
+  const [hasPlaybackError, setHasPlaybackError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement || !videoTrack) {
+      return;
+    }
+
+    const stream = new MediaStream([videoTrack.mediaStreamTrack]);
+    videoElement.srcObject = stream;
+    videoElement.play().catch(() => {
+      // Browser autoplay policies may block playback until user interaction.
+    });
+
+    return () => {
+      videoElement.srcObject = null;
+    };
+  }, [videoTrack]);
+
+  if (!videoTrack) {
+    return null;
+  }
+
+  return (
+    <Message title="Ingress Video" from="assistant">
+      <MessageContent className="w-full min-w-[260px] max-w-[min(620px,95vw)] rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+        <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <span>{title?.trim() || 'Ingress video'}</span>
+          <span>{trackRef.participant.identity}</span>
+        </div>
+        {!hasPlaybackError ? (
+          <video
+            ref={videoRef}
+            className="w-full max-w-sm rounded-lg border border-[var(--border)] bg-black"
+            controls
+            playsInline
+            onError={() => {
+              console.warn('Failed to render ingress video track', trackRef.participant.identity);
+              setHasPlaybackError(true);
+            }}
+          />
+        ) : (
+          <p className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-muted)]">
+            Unable to play ingress video.
+          </p>
+        )}
+      </MessageContent>
+    </Message>
   );
 }

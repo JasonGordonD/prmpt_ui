@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
-import { useAgent, useSessionContext, useSessionMessages } from '@livekit/components-react';
-import { type DataPacket_Kind, type RemoteParticipant, RoomEvent } from 'livekit-client';
-import { AgentChatTranscript, type GeneratedImageTimelineItem } from '@/components/agents-ui/agent-chat-transcript';
+import { useAgent, useSessionContext, useSessionMessages, useTracks } from '@livekit/components-react';
+import { type DataPacket_Kind, type RemoteParticipant, RoomEvent, Track } from 'livekit-client';
+import {
+  AgentChatTranscript,
+  type GeneratedImageTimelineItem,
+  type IngressVideoTrackItem,
+} from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
   type AgentControlBarControls,
@@ -187,6 +191,7 @@ export function AgentSessionView_01({
   const [uploadedItems, setUploadedItems] = useState<UploadTimelineItem[]>([]);
   const [receivedImages, setReceivedImages] = useState<string[]>([]);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImageTimelineItem[]>([]);
+  const cameraAndUnknownTracks = useTracks([Track.Source.Camera, Track.Source.Unknown]);
   const { state: agentState } = useAgent();
 
   const controls: AgentControlBarControls = {
@@ -207,6 +212,35 @@ export function AgentSessionView_01({
       return [...current, nextItem];
     });
   };
+
+  const ingressVideoTracks = useMemo<IngressVideoTrackItem[]>(() => {
+    const parseTitle = (metadata?: string): string | undefined => {
+      if (!metadata) return undefined;
+      try {
+        const parsed = JSON.parse(metadata) as { title?: unknown };
+        if (typeof parsed.title === 'string' && parsed.title.trim()) {
+          return parsed.title.trim();
+        }
+      } catch {
+        // Metadata can be plain text; ignore parse failures.
+      }
+      return undefined;
+    };
+
+    return cameraAndUnknownTracks
+      .filter((trackRef) => {
+        const identity = trackRef.participant.identity ?? '';
+        return identity.startsWith('video-') && !trackRef.participant.isLocal;
+      })
+      .map((trackRef) => {
+        const sid = trackRef.publication.trackSid || trackRef.publication.track?.sid || trackRef.source;
+        return {
+          id: `${trackRef.participant.identity}:${sid}`,
+          trackRef,
+          title: parseTitle(trackRef.participant.metadata),
+        };
+      });
+  }, [cameraAndUnknownTracks]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -317,6 +351,7 @@ export function AgentSessionView_01({
                 uploadedItems={uploadedItems}
                 receivedImages={receivedImages}
                 generatedImages={generatedImages}
+                ingressVideoTracks={ingressVideoTracks}
                 className="mx-auto h-full w-full max-w-2xl [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-20 md:[&>div>div]:px-6"
               />
             </motion.div>
