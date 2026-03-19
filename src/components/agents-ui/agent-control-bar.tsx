@@ -70,6 +70,14 @@ function createUploadId() {
     : `upload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function getUploadTopicsForFile(file: File): string[] {
+  if (file.type.startsWith('image/')) {
+    // Send image uploads on all known byte-stream topics used across agent stacks.
+    return ['images', 'uploads', 'files'];
+  }
+  return ['uploads', 'files'];
+}
+
 export type UploadTimelineItem = {
   id: string;
   name: string;
@@ -340,10 +348,20 @@ export function AgentControlBar({
     setUploadStatus('uploading');
 
     try {
-      await session.room.localParticipant.sendFile(file, {
-        mimeType: file.type,
-        topic: 'files',
-      });
+      const topics = getUploadTopicsForFile(file);
+      const deliveryResults = await Promise.allSettled(
+        topics.map((topic) =>
+          session.room.localParticipant.sendFile(file, {
+            mimeType: file.type,
+            topic,
+          }),
+        ),
+      );
+
+      const delivered = deliveryResults.some((result) => result.status === 'fulfilled');
+      if (!delivered) {
+        throw new Error('File delivery failed for all topics');
+      }
 
       onUploadItemChange?.({
         ...baseItem,
@@ -354,7 +372,7 @@ export function AgentControlBar({
       onUploadItemChange?.({
         ...baseItem,
         status: 'failed',
-        errorMessage: 'Upload failed. Please try again.',
+        errorMessage: 'Upload failed to reach the session. Please try again.',
       });
       setUploadStatus('failed');
     } finally {
