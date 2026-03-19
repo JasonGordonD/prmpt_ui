@@ -171,11 +171,13 @@ export function AgentChatTranscript({
     }
 
     const combined: TimelineEntry[] = [];
+    const matchedGeneratedIds = new Set<string>();
     for (const entry of baseTimeline) {
       combined.push(entry);
       if (entry.kind === 'message') {
         const linkedImages = generatedByMessageId.get(entry.id) ?? [];
         for (const linkedImage of linkedImages) {
+          matchedGeneratedIds.add(linkedImage.id);
           combined.push({
             kind: 'generated-image',
             id: linkedImage.id,
@@ -186,7 +188,10 @@ export function AgentChatTranscript({
       }
     }
 
-    for (const image of unanchored) {
+    for (const image of generatedImageEntries) {
+      if (matchedGeneratedIds.has(image.id)) {
+        continue;
+      }
       combined.push({
         kind: 'generated-image',
         id: image.id,
