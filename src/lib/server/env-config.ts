@@ -18,6 +18,10 @@ type LiveKitEnvKeys = {
 // Explicit process.env references ensure Next.js/Vercel include variables in the server bundle.
 // Avoid direct dynamic `process.env[key]` reads for runtime reliability.
 const ENV_VALUES: Record<string, string | undefined> = {
+  LIVEKIT_API_KEY: process.env.LIVEKIT_API_KEY,
+  LIVEKIT_API_SECRET: process.env.LIVEKIT_API_SECRET,
+  LIVEKIT_URL: process.env.LIVEKIT_URL,
+
   LIVEKIT_API_KEY_MINKA: process.env.LIVEKIT_API_KEY_MINKA,
   LIVEKIT_API_SECRET_MINKA: process.env.LIVEKIT_API_SECRET_MINKA,
   LIVEKIT_URL_MINKA: process.env.LIVEKIT_URL_MINKA,
@@ -48,42 +52,54 @@ const ENV_VALUES: Record<string, string | undefined> = {
   AGENT_PASSWORD_JRVS: process.env.AGENT_PASSWORD_JRVS,
   AGENT_PASSWORD_PACK: process.env.AGENT_PASSWORD_PACK,
   AGENT_PASSWORD_THEPACK: process.env.AGENT_PASSWORD_THEPACK,
+  AGENT_PASSWORD: process.env.AGENT_PASSWORD,
 };
 
 export const LIVEKIT_ENV_KEYS_BY_AGENT: Record<AgentId, LiveKitEnvKeys> = {
   minka: {
-    apiKey: ['LIVEKIT_API_KEY_MINKA'],
-    apiSecret: ['LIVEKIT_API_SECRET_MINKA'],
-    url: ['LIVEKIT_URL_MINKA'],
+    apiKey: ['LIVEKIT_API_KEY_MINKA', 'LIVEKIT_API_KEY'],
+    apiSecret: ['LIVEKIT_API_SECRET_MINKA', 'LIVEKIT_API_SECRET'],
+    url: ['LIVEKIT_URL_MINKA', 'LIVEKIT_URL'],
   },
   coaching: {
-    apiKey: ['LIVEKIT_API_KEY_COACHING'],
-    apiSecret: ['LIVEKIT_API_SECRET_COACHING'],
-    url: ['LIVEKIT_URL_COACHING'],
+    apiKey: ['LIVEKIT_API_KEY_COACHING', 'LIVEKIT_API_KEY'],
+    apiSecret: ['LIVEKIT_API_SECRET_COACHING', 'LIVEKIT_API_SECRET'],
+    url: ['LIVEKIT_URL_COACHING', 'LIVEKIT_URL'],
   },
   lovebirds: {
-    apiKey: ['LIVEKIT_API_KEY_LOVEBIRDS'],
-    apiSecret: ['LIVEKIT_API_SECRET_LOVEBIRDS'],
-    url: ['LIVEKIT_URL_LOVEBIRDS'],
+    apiKey: ['LIVEKIT_API_KEY_LOVEBIRDS', 'LIVEKIT_API_KEY'],
+    apiSecret: ['LIVEKIT_API_SECRET_LOVEBIRDS', 'LIVEKIT_API_SECRET'],
+    url: ['LIVEKIT_URL_LOVEBIRDS', 'LIVEKIT_URL'],
   },
   jrvs: {
-    apiKey: ['LIVEKIT_API_KEY_JRVS'],
-    apiSecret: ['LIVEKIT_API_SECRET_JRVS'],
-    url: ['LIVEKIT_URL_JRVS'],
+    apiKey: ['LIVEKIT_API_KEY_JRVS', 'LIVEKIT_API_KEY'],
+    apiSecret: ['LIVEKIT_API_SECRET_JRVS', 'LIVEKIT_API_SECRET'],
+    url: ['LIVEKIT_URL_JRVS', 'LIVEKIT_URL'],
   },
   pack: {
-    apiKey: ['LIVEKIT_API_KEY_PACK', 'LIVEKIT_API_KEY_THEPACK'],
-    apiSecret: ['LIVEKIT_API_SECRET_PACK', 'LIVEKIT_API_SECRET_THEPACK'],
-    url: ['LIVEKIT_URL_PACK', 'LIVEKIT_URL_THEPACK'],
+    apiKey: ['LIVEKIT_API_KEY_PACK', 'LIVEKIT_API_KEY_THEPACK', 'LIVEKIT_API_KEY'],
+    apiSecret: ['LIVEKIT_API_SECRET_PACK', 'LIVEKIT_API_SECRET_THEPACK', 'LIVEKIT_API_SECRET'],
+    url: ['LIVEKIT_URL_PACK', 'LIVEKIT_URL_THEPACK', 'LIVEKIT_URL'],
   },
 };
 
 export const PASSWORD_ENV_KEYS_BY_AGENT: Record<AgentId, string[]> = {
-  minka: ['AGENT_PASSWORD_MINKA'],
-  coaching: ['AGENT_PASSWORD_COACHING'],
-  lovebirds: ['AGENT_PASSWORD_LOVEBIRDS'],
-  jrvs: ['AGENT_PASSWORD_JRVS'],
-  pack: ['AGENT_PASSWORD_PACK', 'AGENT_PASSWORD_THEPACK'],
+  minka: ['AGENT_PASSWORD_MINKA', 'AGENT_PASSWORD'],
+  coaching: ['AGENT_PASSWORD_COACHING', 'AGENT_PASSWORD'],
+  lovebirds: ['AGENT_PASSWORD_LOVEBIRDS', 'AGENT_PASSWORD'],
+  jrvs: ['AGENT_PASSWORD_JRVS', 'AGENT_PASSWORD'],
+  pack: ['AGENT_PASSWORD_PACK', 'AGENT_PASSWORD_THEPACK', 'AGENT_PASSWORD'],
+};
+
+const AGENT_ID_ALIASES: Record<string, AgentId> = {
+  minka: 'minka',
+  coaching: 'coaching',
+  lovebirds: 'lovebirds',
+  jrvs: 'jrvs',
+  pack: 'pack',
+  thepack: 'pack',
+  'the-pack': 'pack',
+  'the_pack': 'pack',
 };
 
 function resolveEnvValue(candidateKeys: string[]): EnvResolution {
@@ -121,15 +137,24 @@ function resolveEnvValue(candidateKeys: string[]): EnvResolution {
 }
 
 export function isSupportedAgentId(agentId: string): agentId is AgentId {
-  return agentId in LIVEKIT_ENV_KEYS_BY_AGENT;
+  return typeof AGENT_ID_ALIASES[agentId.trim().toLowerCase()] !== 'undefined';
 }
 
-export function getLiveKitCredentials(agentId: string) {
-  if (!isSupportedAgentId(agentId)) {
+export function normalizeAgentId(agentId: string | undefined | null): AgentId | undefined {
+  if (!agentId) {
     return undefined;
   }
 
-  const envKeys = LIVEKIT_ENV_KEYS_BY_AGENT[agentId];
+  return AGENT_ID_ALIASES[agentId.trim().toLowerCase()];
+}
+
+export function getLiveKitCredentials(agentId: string) {
+  const normalizedAgentId = normalizeAgentId(agentId);
+  if (!normalizedAgentId) {
+    return undefined;
+  }
+
+  const envKeys = LIVEKIT_ENV_KEYS_BY_AGENT[normalizedAgentId];
   const apiKey = resolveEnvValue(envKeys.apiKey);
   const apiSecret = resolveEnvValue(envKeys.apiSecret);
   const url = resolveEnvValue(envKeys.url);
@@ -155,11 +180,12 @@ export function getLiveKitCredentials(agentId: string) {
 }
 
 export function getAgentPassword(agentId: string) {
-  if (!isSupportedAgentId(agentId)) {
+  const normalizedAgentId = normalizeAgentId(agentId);
+  if (!normalizedAgentId) {
     return undefined;
   }
 
-  const candidateKeys = PASSWORD_ENV_KEYS_BY_AGENT[agentId];
+  const candidateKeys = PASSWORD_ENV_KEYS_BY_AGENT[normalizedAgentId];
   const password = resolveEnvValue(candidateKeys);
   const isConfigured = !!password.value;
 

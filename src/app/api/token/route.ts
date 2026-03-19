@@ -1,12 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken, RoomAgentDispatch, RoomConfiguration } from 'livekit-server-sdk';
 import { getAgentById } from '@/lib/agents';
-import { getLiveKitCredentials } from '@/lib/server/env-config';
+import { getAgentPassword, getLiveKitCredentials, normalizeAgentId } from '@/lib/server/env-config';
+import {
+  parseRequestBody,
+  readCookieValue,
+  readObjectField,
+  readStringField,
+} from '@/lib/server/request-parsing';
 import crypto from 'crypto';
+
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { agentId, agentName, metadata, agentPassword } = await req.json();
+    const parsedBody = await parseRequestBody(req);
+    if (!parsedBody.ok) {
+      return NextResponse.json({ error: parsedBody.error }, { status: 400 });
+    }
+
+    const rawAgentId = readStringField(parsedBody.body, ['agentId', 'agent_id', 'agent']);
+    const agentId = normalizeAgentId(rawAgentId);
+    const agentNameFromRequest = readStringField(parsedBody.body, ['agentName', 'agent_name']);
+    const metadata =
+      readObjectField(parsedBody.body, ['metadata', 'meta', 'context']) ??
+      undefined;
+    const providedPassword = readStringField(parsedBody.body, ['agentPassword', 'password', 'pass', 'accessToken', 'token']);
 
     if (!agentId) {
       return NextResponse.json({ error: 'Missing agentId' }, { status: 400 });
@@ -17,8 +36,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unknown agent' }, { status: 400 });
     }
 
-    const cookie = req.cookies.get(`prmpt_access_${agentId}`);
-    if (!cookie || cookie.value !== 'validated') {
+    const cookieValue = readCookieValue(req, `prmpt_access_${agentId}`);
+    const isCookieAuthorized = cookieValue === 'validated';
+
+    let isPasswordAuthorized = false;
+    if (!isCookieAuthorized) {
+      if (providedPassword) {
+        const passwordConfig = getAgentPassword(agentId);
+        isPasswordAuthorized = passwordConfig?.value === providedPassword;
+      }
+    }
+
+    if (!isCookieAuthorized && !isPasswordAuthorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -41,7 +70,14 @@ export async function POST(req: NextRequest) {
         payload.blankKeys = envConfig?.blankKeys ?? [];
       }
 
-      return NextResponse.json(payload, { status: 500 });
+      return NextResponse.json(
+        {
+          ...payload,
+          errorCode: 'LIVEKIT_NOT_CONFIGURED',
+          resolvedKeys: envConfig?.resolvedKeys,
+        },
+        { status: 500 }
+      );
     }
 
     const apiKey = envConfig.credentials.apiKey;
@@ -53,8 +89,9 @@ export async function POST(req: NextRequest) {
       ER407: 'rami',
       Luvisblind1: 'lovebirds-user',
     };
-    const participantIdentity = identityMap[agentPassword] ?? `user-${crypto.randomUUID()}`;
-    const identity = participantIdentity;
+    const participantIdentity = providedPassword ? identityMap[providedPassword] : undefined;
+    const identity = participantIdentity ?? `${agentId}-user-${crypto.randomUUID()}`;
+    const agentName = agentNameFromRequest ?? agent.agentName;
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity,
@@ -94,6 +131,14 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('Token generation error:', err);
-    return NextResponse.json({ error: 'Failed to generate token' }, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json(
+      {
+        error: 'Failed to generate token',
+        errorCode: 'TOKEN_GENERATION_FAILED',
+        ...(process.env.NODE_ENV !== 'production' ? { details: errorMessage } : {}),
+      },
+      { status: 500 }
+    );
   }
 }

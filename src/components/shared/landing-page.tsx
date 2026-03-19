@@ -48,6 +48,8 @@ export function LandingPage() {
 
       if (data.valid) {
         router.push(`/${selectedAgent.routeGroup}`);
+      } else if (data.errorCode === 'PASSWORD_NOT_CONFIGURED') {
+        setError('Password is not configured for this agent in this environment.');
       } else {
         setError('Invalid password. Please try again.');
       }
