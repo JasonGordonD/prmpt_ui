@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { useChat, useSessionContext } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { ConnectionState, Track } from 'livekit-client';
 import { Loader, MessageSquareTextIcon, Paperclip, SendHorizontal } from 'lucide-react';
 import { motion, type MotionProps } from 'motion/react';
 
@@ -329,6 +329,13 @@ export function AgentControlBar({
       return;
     }
 
+    const remoteDestinationIdentities = Array.from(session.room.remoteParticipants.values())
+      .map((participant) => participant.identity)
+      .filter(
+        (identity): identity is string =>
+          Boolean(identity) && identity !== session.room.localParticipant.identity,
+      );
+
     const uploadId = createUploadId();
     const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
     const timestamp = Date.now();
@@ -347,12 +354,20 @@ export function AgentControlBar({
     setUploadStatus('uploading');
 
     try {
+      if (session.room.state !== ConnectionState.Connected) {
+        throw new Error('Room is not connected');
+      }
+      if (remoteDestinationIdentities.length === 0) {
+        throw new Error('No remote participant is connected to receive uploads');
+      }
+
       const topics = getUploadTopicsForFile(file);
       const deliveryResults = await Promise.allSettled(
         topics.map((topic) =>
           session.room.localParticipant.sendFile(file, {
             mimeType: file.type,
             topic,
+            destinationIdentities: remoteDestinationIdentities,
           }),
         ),
       );

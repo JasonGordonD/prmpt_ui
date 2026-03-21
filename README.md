@@ -129,6 +129,13 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
   - `/pack/session` → `/pack`
 - Token generation and auth flow are unchanged: start button still calls `/api/token` with existing agent identifiers.
 
+## Image upload delivery hardening after session consolidation (WO-CURSOR-IMAGEUPLOAD-001)
+
+- Upload send path now verifies the room is actively connected before calling `sendFile`.
+- Uploads are targeted to currently connected remote participant identities via `destinationIdentities` to avoid false-positive local send success with no active recipient.
+- Image uploads continue to use topic `images`; non-image uploads keep their existing topics.
+- This applies to active `AgentControlBar` uploads and shared upload components for consistency.
+
 ## Deployment + rollback references (2026-03-16 overhaul)
 
 ### Production deployment target

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Upload, FileText, ImageIcon, X, Check } from 'lucide-react';
-import type { Room } from 'livekit-client';
+import { ConnectionState, type Room } from 'livekit-client';
 
 type FileUploadProps = {
   room?: Room;
@@ -43,9 +43,21 @@ export function FileUpload({ room, className = '' }: FileUploadProps) {
 
       setStatus('sending');
       try {
+        if (room.state !== ConnectionState.Connected) {
+          throw new Error('Room is not connected');
+        }
+
+        const destinationIdentities = Array.from(room.remoteParticipants.values())
+          .map((participant) => participant.identity)
+          .filter((identity): identity is string => Boolean(identity) && identity !== room.localParticipant.identity);
+        if (destinationIdentities.length === 0) {
+          throw new Error('No remote participant available for upload delivery');
+        }
+
         await room.localParticipant.sendFile(file, {
           mimeType: file.type,
           topic: getUploadTopic(file),
+          destinationIdentities,
         });
         setStatus('sent');
         setTimeout(() => {

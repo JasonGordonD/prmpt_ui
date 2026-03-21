@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Track } from 'livekit-client';
+import { ConnectionState, Track } from 'livekit-client';
 import {
   useTrackToggle,
   useChat,
@@ -46,9 +46,21 @@ function FileUploadButton() {
     setStatus('sending');
 
     try {
+      if (session.room.state !== ConnectionState.Connected) {
+        throw new Error('Room is not connected');
+      }
+
+      const destinationIdentities = Array.from(session.room.remoteParticipants.values())
+        .map((participant) => participant.identity)
+        .filter((identity): identity is string => Boolean(identity) && identity !== session.room.localParticipant.identity);
+      if (destinationIdentities.length === 0) {
+        throw new Error('No remote participant available for upload delivery');
+      }
+
       await session.room.localParticipant.sendFile(file, {
         mimeType: file.type,
         topic: getUploadTopic(file),
+        destinationIdentities,
       });
       setStatus('sent');
       setTimeout(() => {
