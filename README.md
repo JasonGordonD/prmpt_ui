@@ -112,6 +112,23 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
 - Global text legibility backstop for aura overlap:
   - `text-shadow: 0 0 20px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.3)`
 
+## In-place session start flow (WO-UI-004)
+
+- Agent start pages now connect to LiveKit in-place on:
+  - `/jrvs`
+  - `/coaching`
+  - `/minka`
+  - `/lovebirds`
+  - `/pack`
+- The extra `/agent/session?token=...` transition is removed from the primary UX.
+- Legacy `/agent/session` routes are retained only as redirects back to their agent root pages:
+  - `/jrvs/session` → `/jrvs`
+  - `/coaching/session` → `/coaching`
+  - `/minka/session` → `/minka`
+  - `/lovebirds/session` → `/lovebirds`
+  - `/pack/session` → `/pack`
+- Token generation and auth flow are unchanged: start button still calls `/api/token` with existing agent identifiers.
+
 ## Deployment + rollback references (2026-03-16 overhaul)
 
 ### Production deployment target
