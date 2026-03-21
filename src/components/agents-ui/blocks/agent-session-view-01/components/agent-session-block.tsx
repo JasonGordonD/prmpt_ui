@@ -88,6 +88,8 @@ const SHIMMER_MOTION_PROPS: MotionProps = {
   exit: 'hidden',
 };
 
+const GENERATED_IMAGE_DEDUP_WINDOW_MS = 7000;
+
 interface FadeProps {
   top?: boolean;
   bottom?: boolean;
@@ -187,7 +189,7 @@ export function AgentSessionView_01({
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const messagesRef = useRef(messages);
-  const generatedImageObjectUrlsRef = useRef<string[]>([]);
+  const generatedImageObjectUrlsRef = useRef<Set<string>>(new Set());
   const [chatOpen, setChatOpen] = useState(false);
   const [uploadedItems, setUploadedItems] = useState<UploadTimelineItem[]>([]);
   const [receivedImages, setReceivedImages] = useState<string[]>([]);
@@ -251,31 +253,94 @@ export function AgentSessionView_01({
     const room = session.room;
     if (!room) return;
 
-    const appendGeneratedImage = (url: string) => {
+    const isBlobUrl = (url: string) => url.startsWith('blob:');
+
+    const revokeTrackedGeneratedImageObjectUrl = (url: string) => {
+      if (!generatedImageObjectUrlsRef.current.delete(url)) {
+        return;
+      }
+      URL.revokeObjectURL(url);
+    };
+
+    const appendGeneratedImage = (incomingUrl: string, source: 'byte-stream' | 'url-payload') => {
+      const url = incomingUrl.trim();
+      if (!url) {
+        return;
+      }
+
+      if (source === 'url-payload') {
+        setReceivedImages((prev) => (prev.includes(url) ? prev : [...prev, url]));
+      }
+
       const latestAgentMessage = [...messagesRef.current]
         .reverse()
         .find((message) => !message.from?.isLocal);
+      const triggerMessageId = latestAgentMessage?.id ?? null;
+      const timestamp = Date.now();
+      let blobUrlToRevoke: string | null = null;
 
-      setReceivedImages((prev) => [...prev, url]);
-      setGeneratedImages((prev) => [
-        ...prev,
-        {
-          id:
-            typeof crypto !== 'undefined' && 'randomUUID' in crypto
-              ? crypto.randomUUID()
-              : `generated-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          url,
-          timestamp: Date.now(),
-          triggerMessageId: latestAgentMessage?.id ?? null,
-        },
-      ]);
+      setGeneratedImages((prev) => {
+        const existingExactUrl = prev.find((item) => item.url === url);
+        if (existingExactUrl) {
+          return prev;
+        }
+
+        let candidateIndex = -1;
+        for (let index = prev.length - 1; index >= 0; index -= 1) {
+          if (source !== 'url-payload') {
+            break;
+          }
+
+          const item = prev[index];
+          if (item.triggerMessageId !== triggerMessageId) {
+            continue;
+          }
+          if (timestamp - item.timestamp > GENERATED_IMAGE_DEDUP_WINDOW_MS) {
+            continue;
+          }
+
+          if (isBlobUrl(item.url)) {
+            candidateIndex = index;
+            break;
+          }
+        }
+
+        if (candidateIndex >= 0) {
+          const existingBlob = prev[candidateIndex];
+          blobUrlToRevoke = existingBlob.url;
+          const replaced = [...prev];
+          replaced[candidateIndex] = {
+            ...existingBlob,
+            url,
+            timestamp,
+          };
+          return replaced;
+        }
+
+        return [
+          ...prev,
+          {
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : `generated-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            url,
+            timestamp,
+            triggerMessageId,
+          },
+        ];
+      });
+
+      if (blobUrlToRevoke) {
+        revokeTrackedGeneratedImageObjectUrl(blobUrlToRevoke);
+      }
     };
 
     const revokeGeneratedImageObjectUrls = () => {
       for (const objectUrl of generatedImageObjectUrlsRef.current) {
         URL.revokeObjectURL(objectUrl);
       }
-      generatedImageObjectUrlsRef.current = [];
+      generatedImageObjectUrlsRef.current.clear();
     };
 
     const processImageByteStream = async (
@@ -298,8 +363,8 @@ export function AgentSessionView_01({
           type: reader.info.mimeType || 'application/octet-stream',
         });
         const objectUrl = URL.createObjectURL(blob);
-        generatedImageObjectUrlsRef.current.push(objectUrl);
-        appendGeneratedImage(objectUrl);
+        generatedImageObjectUrlsRef.current.add(objectUrl);
+        appendGeneratedImage(objectUrl, 'byte-stream');
       } catch (error) {
         console.warn('Ignoring malformed image byte stream payload', error);
       }
@@ -327,7 +392,7 @@ export function AgentSessionView_01({
           return;
         }
 
-        appendGeneratedImage(url);
+        appendGeneratedImage(url, 'url-payload');
       } catch (error) {
         console.warn('Ignoring malformed image_egress payload', error);
       }
@@ -362,7 +427,7 @@ export function AgentSessionView_01({
       <Fade top className="absolute inset-x-4 top-0 z-20 h-40" />
       {/* transcript */}
 
-      <div className="pointer-events-auto absolute top-0 bottom-[135px] z-30 flex w-full flex-col md:bottom-[170px]">
+      <div className="pointer-events-auto absolute top-0 bottom-[102px] z-30 flex w-full flex-col md:bottom-[118px]">
         <AnimatePresence>
           {chatOpen && (
             <motion.div
@@ -416,7 +481,7 @@ export function AgentSessionView_01({
             )}
           </AnimatePresence>
         )}
-        <div className="bg-background relative mx-auto max-w-2xl pb-3 md:pb-12">
+        <div className="bg-background relative mx-auto max-w-2xl pb-2 md:pb-4">
           <Fade bottom className="absolute inset-x-0 top-0 h-4 -translate-y-full" />
           <AgentControlBar
             variant="livekit"

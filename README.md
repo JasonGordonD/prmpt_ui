@@ -94,6 +94,19 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
 - Non-image uploads continue to use non-image topics (`files` / `uploads`) depending on component flow.
 - Upload UI "sent"/"failed" states are tied to `sendFile` completion outcomes (byte-stream send success/failure), not text metadata acknowledgements.
 
+## Video player + image dedup + control bar compaction (WO-CURSOR-VIDEOPLAYER-N2-001)
+
+- **N5 (pause/play coupling):** Ingress video cards now couple playback controls to ingress participant audio subscription:
+  - pause/end on the video player unsubscribes ingress participant audio
+  - play re-subscribes ingress participant audio
+- **N6 (timeline layout containment):** Ingress video cards are constrained to transcript message width and now use CSS containment to prevent timeline layout breakage/overflow.
+- **N2 (generated image dedup):** Generated image handling now reconciles byte-stream blob deliveries and `image_egress` URL payloads so a single generated image is shown in the timeline instead of duplicate blob+URL entries.
+- **Bottom bar compaction:** `AgentControlBar` now renders as a single compact row:
+  - media controls inline on the left (mic/screen/chat/upload + optional camera)
+  - text input inline in the middle
+  - END CALL on the right
+  - session transcript/bottom spacing updated to match reduced control bar height.
+
 ## Typography system (2026 overhaul)
 
 - Global font stack:

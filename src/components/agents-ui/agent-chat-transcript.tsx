@@ -395,8 +395,24 @@ function IngressVideoMessage({
 }) {
   const publicationTrack = trackRef.publication.track;
   const videoTrack = publicationTrack?.kind === Track.Kind.Video ? publicationTrack : undefined;
+  const participantAudioPublications = useMemo(() => {
+    return Array.from(trackRef.participant.trackPublications.values()).filter(
+      (publication) => publication.kind === Track.Kind.Audio,
+    );
+  }, [trackRef.participant]);
   const [hasPlaybackError, setHasPlaybackError] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const setParticipantAudioSubscribed = useCallback(
+    (subscribed: boolean) => {
+      for (const publication of participantAudioPublications) {
+        if ('setSubscribed' in publication && typeof publication.setSubscribed === 'function') {
+          publication.setSubscribed(subscribed);
+        }
+      }
+    },
+    [participantAudioPublications],
+  );
 
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -406,14 +422,30 @@ function IngressVideoMessage({
 
     const stream = new MediaStream([videoTrack.mediaStreamTrack]);
     videoElement.srcObject = stream;
+    setParticipantAudioSubscribed(true);
     videoElement.play().catch(() => {
       // Browser autoplay policies may block playback until user interaction.
     });
 
-    return () => {
-      videoElement.srcObject = null;
+    const handlePlay = () => {
+      setParticipantAudioSubscribed(true);
     };
-  }, [videoTrack]);
+    const handlePause = () => {
+      setParticipantAudioSubscribed(false);
+    };
+
+    videoElement.addEventListener('play', handlePlay);
+    videoElement.addEventListener('pause', handlePause);
+    videoElement.addEventListener('ended', handlePause);
+
+    return () => {
+      videoElement.removeEventListener('play', handlePlay);
+      videoElement.removeEventListener('pause', handlePause);
+      videoElement.removeEventListener('ended', handlePause);
+      videoElement.srcObject = null;
+      setParticipantAudioSubscribed(true);
+    };
+  }, [setParticipantAudioSubscribed, videoTrack]);
 
   if (!videoTrack) {
     return null;
@@ -421,22 +453,24 @@ function IngressVideoMessage({
 
   return (
     <Message title="Ingress Video" from="assistant">
-      <MessageContent className="w-full min-w-[260px] max-w-[min(620px,95vw)] rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+      <MessageContent className="w-full min-w-0 max-w-[min(520px,95vw)] rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 [contain:layout_paint_style]">
         <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
           <span>{title?.trim() || 'Ingress video'}</span>
           <span>{trackRef.participant.identity}</span>
         </div>
         {!hasPlaybackError ? (
-          <video
-            ref={videoRef}
-            className="w-full max-w-sm rounded-lg border border-[var(--border)] bg-black"
-            controls
-            playsInline
-            onError={() => {
-              console.warn('Failed to render ingress video track', trackRef.participant.identity);
-              setHasPlaybackError(true);
-            }}
-          />
+          <div className="w-full max-w-full overflow-hidden rounded-lg border border-[var(--border)] [contain:layout_paint_style]">
+            <video
+              ref={videoRef}
+              className="block h-auto w-full max-w-full bg-black"
+              controls
+              playsInline
+              onError={() => {
+                console.warn('Failed to render ingress video track', trackRef.participant.identity);
+                setHasPlaybackError(true);
+              }}
+            />
+          </div>
         ) : (
           <p className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-muted)]">
             Unable to play ingress video.

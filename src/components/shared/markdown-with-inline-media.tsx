@@ -221,13 +221,15 @@ function InlineMediaContent({
 
   if (media.type === 'video-file') {
     return (
-      <div className="my-2 space-y-1.5">
-        <video
-          src={media.sourceUrl}
-          controls
-          preload="metadata"
-          className="max-h-96 w-full rounded-lg border border-[var(--border)] bg-black"
-        />
+      <div className="my-2 max-w-full space-y-1.5 [contain:layout_paint_style]">
+        <div className="w-full max-w-full overflow-hidden rounded-lg border border-[var(--border)] [contain:layout_paint_style]">
+          <video
+            src={media.sourceUrl}
+            controls
+            preload="metadata"
+            className="block max-h-96 w-full max-w-full bg-black"
+          />
+        </div>
         <a
           href={media.sourceUrl}
           onClick={(event) => {

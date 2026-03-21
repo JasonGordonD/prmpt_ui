@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { useChat, useSessionContext } from '@livekit/components-react';
 import { ConnectionState, Track } from 'livekit-client';
 import { Loader, MessageSquareTextIcon, Paperclip, SendHorizontal } from 'lucide-react';
-import { motion, type MotionProps } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 import { AgentDisconnectButton } from '@/components/agents-ui/agent-disconnect-button';
@@ -42,26 +41,6 @@ const LK_TOGGLE_VARIANT_2 = [
   'dark:data-[state=on]:bg-blue-500/20 dark:data-[state=on]:text-blue-300',
 ];
 
-const MOTION_PROPS: MotionProps = {
-  variants: {
-    hidden: {
-      height: 0,
-      opacity: 0,
-      marginBottom: 0,
-    },
-    visible: {
-      height: 'auto',
-      opacity: 1,
-      marginBottom: 12,
-    },
-  },
-  initial: 'hidden',
-  transition: {
-    duration: 0.3,
-    ease: 'easeOut',
-  },
-};
-
 const ACCEPTED_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain'];
 
 function createUploadId() {
@@ -89,16 +68,16 @@ export type UploadTimelineItem = {
 };
 
 interface AgentChatInputProps {
-  chatOpen: boolean;
+  disabled?: boolean;
   onSend?: (message: string) => void;
   className?: string;
 }
 
-function AgentChatInput({ chatOpen, onSend = async () => {}, className }: AgentChatInputProps) {
+function AgentChatInput({ disabled = false, onSend = async () => {}, className }: AgentChatInputProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState<string>('');
-  const isDisabled = isSending || message.trim().length === 0;
+  const isDisabled = disabled || isSending || message.trim().length === 0;
 
   const handleSend = async () => {
     if (isDisabled) {
@@ -129,31 +108,30 @@ function AgentChatInput({ chatOpen, onSend = async () => {}, className }: AgentC
   };
 
   useEffect(() => {
-    if (chatOpen) return;
-    // when not disabled refocus on input
+    if (disabled) return;
     inputRef.current?.focus();
-  }, [chatOpen]);
+  }, [disabled]);
 
   return (
-    <div className={cn('mb-3 flex grow items-end gap-2 rounded-md pl-1 text-sm', className)}>
+    <div className={cn('flex min-w-0 grow items-center gap-2 text-sm', className)}>
       <textarea
         autoFocus
         ref={inputRef}
         value={message}
-        disabled={!chatOpen || isSending}
+        disabled={disabled || isSending}
         placeholder="Type something..."
         onKeyDown={handleKeyDown}
         onChange={(e) => setMessage(e.target.value)}
-        className="field-sizing-content max-h-16 min-h-8 flex-1 resize-none py-2 [scrollbar-width:thin] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="field-sizing-content max-h-20 min-h-9 flex-1 resize-none rounded-md bg-transparent px-2 py-2 leading-tight [scrollbar-width:thin] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       />
       <Button
-        size="icon"
+        size="icon-sm"
         type="button"
         disabled={isDisabled}
         variant={isDisabled ? 'secondary' : 'default'}
         title={isSending ? 'Sending...' : 'Send'}
         onClick={handleButtonClick}
-        className="self-end disabled:cursor-not-allowed"
+        className="shrink-0 rounded-full disabled:cursor-not-allowed"
       >
         {isSending ? <Loader className="animate-spin" /> : <SendHorizontal />}
       </Button>
@@ -407,156 +385,156 @@ export function AgentControlBar({
     <div
       aria-label="Voice assistant controls"
       className={cn(
-        'bg-background border-input/50 dark:border-muted flex flex-col border p-3 drop-shadow-md/3',
+        'bg-background border-input/50 dark:border-muted flex items-center gap-2 border p-2 drop-shadow-md/3',
         variant === 'livekit' ? 'rounded-[31px]' : 'rounded-lg',
         className,
       )}
       {...props}
     >
-      <motion.div
-        {...MOTION_PROPS}
-        inert={!(isChatOpen || isChatOpenUncontrolled)}
-        animate={isChatOpen || isChatOpenUncontrolled ? 'visible' : 'hidden'}
-        className="border-input/50 flex w-full items-start overflow-hidden border-b"
-      >
-        <AgentChatInput
-          chatOpen={isChatOpen || isChatOpenUncontrolled}
-          onSend={handleSendMessage}
-          className={cn(variant === 'livekit' && '[&_button]:rounded-full')}
-        />
-      </motion.div>
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept={ACCEPTED_UPLOAD_TYPES.join(',')}
+        onChange={(event) => {
+          void handleUploadInputChange(event);
+        }}
+        className="hidden"
+      />
 
-      <div className="flex gap-1">
-        <div className="flex grow gap-1">
-          <input
-            ref={uploadInputRef}
-            type="file"
-            accept={ACCEPTED_UPLOAD_TYPES.join(',')}
-            onChange={(event) => {
-              void handleUploadInputChange(event);
-            }}
-            className="hidden"
-          />
-          {/* Toggle Microphone */}
-          {visibleControls.microphone && (
-            <AgentTrackControl
-              variant={variant === 'outline' ? 'outline' : 'default'}
-              kind="audioinput"
-              aria-label="Toggle microphone"
-              source={Track.Source.Microphone}
-              pressed={microphoneToggle.enabled}
-              disabled={microphoneToggle.pending}
-              audioTrack={microphoneTrack}
-              onPressedChange={microphoneToggle.toggle}
-              onActiveDeviceChange={handleAudioDeviceChange}
-              onMediaDeviceError={handleMicrophoneDeviceSelectError}
-              className={cn(
-                variant === 'livekit' && [
-                  LK_TOGGLE_VARIANT_1,
-                  'rounded-full [&_button:first-child]:rounded-l-full [&_button:last-child]:rounded-r-full',
-                ],
-              )}
-            />
-          )}
-
-          {/* Toggle Camera */}
-          {visibleControls.camera && (
-            <AgentTrackControl
-              variant={variant === 'outline' ? 'outline' : 'default'}
-              kind="videoinput"
-              aria-label="Toggle camera"
-              source={Track.Source.Camera}
-              pressed={cameraToggle.enabled}
-              pending={cameraToggle.pending}
-              disabled={cameraToggle.pending}
-              onPressedChange={cameraToggle.toggle}
-              onMediaDeviceError={handleCameraDeviceSelectError}
-              onActiveDeviceChange={handleVideoDeviceChange}
-              className={cn(
-                variant === 'livekit' && [
-                  LK_TOGGLE_VARIANT_1,
-                  'rounded-full [&_button:first-child]:rounded-l-full [&_button:last-child]:rounded-r-full',
-                ],
-              )}
-            />
-          )}
-
-          {/* Toggle Screen Share */}
-          {visibleControls.screenShare && (
-            <AgentTrackToggle
-              variant={variant === 'outline' ? 'outline' : 'default'}
-              aria-label="Toggle screen share"
-              source={Track.Source.ScreenShare}
-              pressed={screenShareToggle.enabled}
-              disabled={screenShareToggle.pending}
-              onPressedChange={screenShareToggle.toggle}
-              className={cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full'])}
-            />
-          )}
-
-          {/* Toggle Transcript */}
-          {visibleControls.chat && (
-            <Toggle
-              variant={variant === 'outline' ? 'outline' : 'default'}
-              pressed={isChatOpen || isChatOpenUncontrolled}
-              aria-label="Toggle transcript"
-              onPressedChange={(state) => {
-                if (!onIsChatOpenChange) setIsChatOpenUncontrolled(state);
-                else onIsChatOpenChange(state);
-              }}
-              className={agentTrackToggleVariants({
-                variant: variant === 'outline' ? 'outline' : 'default',
-                className: cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full']),
-              })}
-            >
-              <MessageSquareTextIcon />
-            </Toggle>
-          )}
-
-          {/* Upload File */}
-          {visibleControls.upload && (
-            <Toggle
-              variant={variant === 'outline' ? 'outline' : 'default'}
-              pressed={uploadStatus === 'uploading'}
-              disabled={!isConnected || uploadStatus === 'uploading'}
-              aria-label="Upload file"
-              onPressedChange={() => {
-                uploadInputRef.current?.click();
-              }}
-              className={agentTrackToggleVariants({
-                variant: variant === 'outline' ? 'outline' : 'default',
-                className: cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full']),
-              })}
-              title={
-                uploadStatus === 'uploading'
-                  ? 'Uploading...'
-                  : uploadStatus === 'sent'
-                    ? 'Upload complete'
-                    : uploadStatus === 'failed'
-                      ? 'Upload failed'
-                      : 'Upload file'
-              }
-            >
-              {uploadStatus === 'uploading' ? <Loader className="animate-spin" /> : <Paperclip />}
-            </Toggle>
-          )}
-        </div>
-
-        {/* Disconnect */}
-        {visibleControls.leave && (
-          <AgentDisconnectButton
-            onClick={onDisconnect}
-            disabled={!isConnected}
+      <div className="flex shrink-0 items-center gap-1">
+        {/* Toggle Microphone */}
+        {visibleControls.microphone && (
+          <AgentTrackControl
+            variant={variant === 'outline' ? 'outline' : 'default'}
+            kind="audioinput"
+            aria-label="Toggle microphone"
+            source={Track.Source.Microphone}
+            pressed={microphoneToggle.enabled}
+            disabled={microphoneToggle.pending}
+            audioTrack={microphoneTrack}
+            onPressedChange={microphoneToggle.toggle}
+            onActiveDeviceChange={handleAudioDeviceChange}
+            onMediaDeviceError={handleMicrophoneDeviceSelectError}
             className={cn(
-              variant === 'livekit' &&
-                'bg-destructive/10 dark:bg-destructive/10 text-destructive hover:bg-destructive/20 dark:hover:bg-destructive/20 focus:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/4 rounded-full text-xs font-medium tracking-wider',
+              variant === 'livekit' && [
+                LK_TOGGLE_VARIANT_1,
+                'rounded-full [&_button:first-child]:rounded-l-full [&_button:last-child]:rounded-r-full',
+              ],
             )}
+          />
+        )}
+
+        {/* Toggle Camera */}
+        {visibleControls.camera && (
+          <AgentTrackControl
+            variant={variant === 'outline' ? 'outline' : 'default'}
+            kind="videoinput"
+            aria-label="Toggle camera"
+            source={Track.Source.Camera}
+            pressed={cameraToggle.enabled}
+            pending={cameraToggle.pending}
+            disabled={cameraToggle.pending}
+            onPressedChange={cameraToggle.toggle}
+            onMediaDeviceError={handleCameraDeviceSelectError}
+            onActiveDeviceChange={handleVideoDeviceChange}
+            className={cn(
+              variant === 'livekit' && [
+                LK_TOGGLE_VARIANT_1,
+                'rounded-full [&_button:first-child]:rounded-l-full [&_button:last-child]:rounded-r-full',
+              ],
+            )}
+          />
+        )}
+
+        {/* Toggle Screen Share */}
+        {visibleControls.screenShare && (
+          <AgentTrackToggle
+            variant={variant === 'outline' ? 'outline' : 'default'}
+            aria-label="Toggle screen share"
+            source={Track.Source.ScreenShare}
+            pressed={screenShareToggle.enabled}
+            disabled={screenShareToggle.pending}
+            onPressedChange={screenShareToggle.toggle}
+            className={cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full'])}
+          />
+        )}
+
+        {/* Toggle Transcript */}
+        {visibleControls.chat && (
+          <Toggle
+            variant={variant === 'outline' ? 'outline' : 'default'}
+            pressed={isChatOpen || isChatOpenUncontrolled}
+            aria-label="Toggle transcript"
+            onPressedChange={(state) => {
+              if (!onIsChatOpenChange) setIsChatOpenUncontrolled(state);
+              else onIsChatOpenChange(state);
+            }}
+            className={agentTrackToggleVariants({
+              variant: variant === 'outline' ? 'outline' : 'default',
+              className: cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full']),
+            })}
           >
-            <span className="hidden md:inline">END CALL</span>
-            <span className="inline md:hidden">END</span>
-          </AgentDisconnectButton>
+            <MessageSquareTextIcon />
+          </Toggle>
+        )}
+
+        {/* Upload File */}
+        {visibleControls.upload && (
+          <Toggle
+            variant={variant === 'outline' ? 'outline' : 'default'}
+            pressed={uploadStatus === 'uploading'}
+            disabled={!isConnected || uploadStatus === 'uploading'}
+            aria-label="Upload file"
+            onPressedChange={() => {
+              uploadInputRef.current?.click();
+            }}
+            className={agentTrackToggleVariants({
+              variant: variant === 'outline' ? 'outline' : 'default',
+              className: cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full']),
+            })}
+            title={
+              uploadStatus === 'uploading'
+                ? 'Uploading...'
+                : uploadStatus === 'sent'
+                  ? 'Upload complete'
+                  : uploadStatus === 'failed'
+                    ? 'Upload failed'
+                    : 'Upload file'
+            }
+          >
+            {uploadStatus === 'uploading' ? <Loader className="animate-spin" /> : <Paperclip />}
+          </Toggle>
         )}
       </div>
+
+      {visibleControls.chat ? (
+        <div className="border-input/50 min-w-0 grow rounded-full border bg-accent/30 px-1">
+          <AgentChatInput
+            disabled={!isConnected}
+            onSend={handleSendMessage}
+            className={cn(variant === 'livekit' && '[&_button]:rounded-full')}
+          />
+        </div>
+      ) : (
+        <div className="grow" />
+      )}
+
+      {/* Disconnect */}
+      {visibleControls.leave && (
+        <AgentDisconnectButton
+          onClick={onDisconnect}
+          disabled={!isConnected}
+          size="sm"
+          className={cn(
+            'shrink-0 rounded-full px-3 text-xs font-medium tracking-wider whitespace-nowrap',
+            variant === 'livekit' &&
+              'bg-destructive/10 dark:bg-destructive/10 text-destructive hover:bg-destructive/20 dark:hover:bg-destructive/20 focus:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/4',
+          )}
+        >
+          <span className="hidden lg:inline">END CALL</span>
+          <span className="inline lg:hidden">END</span>
+        </AgentDisconnectButton>
+      )}
     </div>
   );
 }
