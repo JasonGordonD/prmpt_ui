@@ -17,6 +17,13 @@ const ACCEPTED_TYPES = [
   'text/plain',
 ];
 
+function getUploadTopic(file: File) {
+  if (file.type.startsWith('image/')) {
+    return 'images';
+  }
+  return 'files';
+}
+
 export function FileUpload({ room, className = '' }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -38,7 +45,7 @@ export function FileUpload({ room, className = '' }: FileUploadProps) {
       try {
         await room.localParticipant.sendFile(file, {
           mimeType: file.type,
-          topic: 'files',
+          topic: getUploadTopic(file),
         });
         setStatus('sent');
         setTimeout(() => {

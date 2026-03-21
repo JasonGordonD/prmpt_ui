@@ -21,6 +21,13 @@ const ACCEPTED_TYPES = [
   'application/pdf', 'text/plain',
 ];
 
+function getUploadTopic(file: File) {
+  if (file.type.startsWith('image/')) {
+    return 'images';
+  }
+  return 'files';
+}
+
 function FileUploadButton() {
   const session = useSessionContext();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +48,7 @@ function FileUploadButton() {
     try {
       await session.room.localParticipant.sendFile(file, {
         mimeType: file.type,
-        topic: 'files',
+        topic: getUploadTopic(file),
       });
       setStatus('sent');
       setTimeout(() => {
