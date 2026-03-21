@@ -84,6 +84,8 @@ function AgentChatInput({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const bufferTimerRef = useRef<number | null>(null);
+  const onSendRef = useRef(onSend);
+  onSendRef.current = onSend;
   const [isSending, setIsSending] = useState(false);
   const [isBufferingMessage, setIsBufferingMessage] = useState(false);
   const [bufferedMessage, setBufferedMessage] = useState<string | null>(null);
@@ -101,7 +103,7 @@ function AgentChatInput({
 
   const hasRemoteParticipant = () => {
     const room = session.room;
-    if (!room || room.state !== ConnectionState.Connected) {
+    if (!room || !session.isConnected) {
       return false;
     }
     return Array.from(room.remoteParticipants.values()).some(
@@ -129,14 +131,10 @@ function AgentChatInput({
   const sendNow = async (outgoingMessage: string) => {
     try {
       setIsSending(true);
-      await onSend(outgoingMessage);
+      await onSendRef.current(outgoingMessage);
       setInlineError('');
       return true;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '';
-      if (errorMessage.toLowerCase().includes('no remote participant')) {
-        return false;
-      }
+    } catch {
       setInlineError('Failed to send message');
       return false;
     } finally {
@@ -154,8 +152,8 @@ function AgentChatInput({
       return;
     }
 
-    if (!session.room || session.room.state !== ConnectionState.Connected) {
-      setInlineError('Agent not connected yet');
+    if (!session.room || !session.isConnected) {
+      setInlineError('Not connected yet');
       return;
     }
 
@@ -172,6 +170,8 @@ function AgentChatInput({
 
     if (!hasRemoteParticipant()) {
       queueMessageUntilAgentConnects(trimmedMessage);
+    } else {
+      setMessage(trimmedMessage);
     }
   };
 
@@ -492,10 +492,15 @@ export function AgentControlBar({
   } = useInputControls({ onDeviceError, saveUserChoices });
 
   const handleSendMessage = async (message: string) => {
-    if (!session.room || session.room.state !== ConnectionState.Connected) {
+    if (!session.room || !session.isConnected) {
       throw new Error('Room is not connected');
     }
 
+    await session.room.localParticipant.sendText(message, {
+      topic: 'lk.chat',
+    });
+
+    // Compatibility fallback for stacks still listening on the legacy chat topic.
     const destinationIdentities = Array.from(session.room.remoteParticipants.values())
       .map((participant) => participant.identity)
       .filter(
@@ -503,16 +508,6 @@ export function AgentControlBar({
           Boolean(identity) && identity !== session.room?.localParticipant.identity,
       );
 
-    if (destinationIdentities.length === 0) {
-      throw new Error('No remote participant is connected to receive chat');
-    }
-
-    await session.room.localParticipant.sendText(message, {
-      topic: 'lk.chat',
-      destinationIdentities,
-    });
-
-    // Compatibility fallback for stacks still listening on the legacy chat topic.
     const legacyMessage = {
       id:
         typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -524,11 +519,13 @@ export function AgentControlBar({
     };
     const payload = new TextEncoder().encode(JSON.stringify(legacyMessage));
 
-    await session.room.localParticipant.publishData(payload, {
-      reliable: true,
-      topic: 'lk-chat-topic',
-      destinationIdentities,
-    });
+    if (destinationIdentities.length > 0) {
+      await session.room.localParticipant.publishData(payload, {
+        reliable: true,
+        topic: 'lk-chat-topic',
+        destinationIdentities,
+      });
+    }
   };
 
   const visibleControls = {
