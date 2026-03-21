@@ -47,10 +47,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 type AgentLifecycleViewProps = {
   agentConfig: AgentConfig;
+  autoStart?: boolean;
   children: React.ReactNode;
 };
 
-export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleViewProps) {
+export function AgentLifecycleView({ agentConfig, autoStart = false, children }: AgentLifecycleViewProps) {
   const router = useRouter();
   const agent = useAgent();
   const session = useSessionContext();
@@ -65,7 +66,7 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
   // The initial useAgent state is 'disconnected' with isFinished=true, isPending=false.
   // We must NOT treat that as "session finished" — it's just the pre-connection state.
   // Show a full pre-connect noir screen before the user starts the session.
-  if (!hasStartedConnecting && agent.state === 'disconnected') {
+  if (!autoStart && !hasStartedConnecting && agent.state === 'disconnected') {
     return (
       <div className="relative flex h-screen items-center justify-center overflow-hidden">
         <ReactShaderToy

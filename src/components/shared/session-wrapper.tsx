@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, Suspense } from 'react';
+import { useMemo, Suspense, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TokenSource } from 'livekit-client';
 import {
@@ -55,14 +55,34 @@ function SessionContent({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SessionAutoStart({ enabled }: { enabled: boolean }) {
+  const session = useSessionContext();
+  const hasAttemptedStartRef = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || hasAttemptedStartRef.current) {
+      return;
+    }
+
+    hasAttemptedStartRef.current = true;
+    void session.start().catch(() => {
+      hasAttemptedStartRef.current = false;
+    });
+  }, [enabled, session]);
+
+  return null;
+}
+
 /* ─── Session Connector ─── */
 function SessionConnector({
   token,
   serverUrl,
+  autoStart = false,
   children,
 }: {
   token: string;
   serverUrl: string;
+  autoStart?: boolean;
   children: React.ReactNode;
 }) {
   const tokenSource = useMemo(
@@ -76,6 +96,7 @@ function SessionConnector({
 
   return (
     <SessionProvider session={session}>
+      <SessionAutoStart enabled={autoStart} />
       <SessionContent>{children}</SessionContent>
     </SessionProvider>
   );
@@ -83,15 +104,21 @@ function SessionConnector({
 
 /* ─── Main SessionWrapper ─── */
 function SessionWrapperInner({
+  token: providedToken,
+  serverUrl: providedServerUrl,
+  autoStart = false,
   children,
 }: {
+  token?: string;
+  serverUrl?: string;
+  autoStart?: boolean;
   agentConfig: AgentConfig;
   children: React.ReactNode;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = (searchParams.get('token') || '').trim();
-  const serverUrl = (searchParams.get('url') || '').trim();
+  const token = (providedToken ?? searchParams.get('token') ?? '').trim();
+  const serverUrl = (providedServerUrl ?? searchParams.get('url') ?? '').trim();
 
   if (!token || !serverUrl) {
     return (
@@ -114,7 +141,7 @@ function SessionWrapperInner({
   }
 
   return (
-    <SessionConnector token={token} serverUrl={serverUrl}>
+    <SessionConnector token={token} serverUrl={serverUrl} autoStart={autoStart}>
       {children}
     </SessionConnector>
   );
@@ -122,9 +149,15 @@ function SessionWrapperInner({
 
 export function SessionWrapper({
   agentConfig,
+  token,
+  serverUrl,
+  autoStart = false,
   children,
 }: {
   agentConfig: AgentConfig;
+  token?: string;
+  serverUrl?: string;
+  autoStart?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -135,7 +168,14 @@ export function SessionWrapper({
         </div>
       }
     >
-      <SessionWrapperInner agentConfig={agentConfig}>{children}</SessionWrapperInner>
+      <SessionWrapperInner
+        agentConfig={agentConfig}
+        token={token}
+        serverUrl={serverUrl}
+        autoStart={autoStart}
+      >
+        {children}
+      </SessionWrapperInner>
     </Suspense>
   );
 }

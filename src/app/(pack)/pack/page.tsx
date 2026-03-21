@@ -1,12 +1,47 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSessionContext } from '@livekit/components-react';
+import { AGENTS } from '@/lib/agents';
+import { SessionWrapper } from '@/components/shared/session-wrapper';
+import { AgentLifecycleView } from '@/components/shared/agent-lifecycle-view';
+import { AgentSessionView } from '@/components/agents-ui/agent-session-view-01';
+
+const packConfig = AGENTS.find((a) => a.id === 'pack')!;
+
+type SessionCredentials = {
+  token: string;
+  serverUrl: string;
+};
+
+function PackActiveSession({ onReturnToIdle }: { onReturnToIdle: () => void }) {
+  const session = useSessionContext();
+
+  return (
+    <AgentSessionView
+      agentConfig={packConfig}
+      isPreConnectBufferEnabled
+      supportsScreenShare
+      supportsChatInput
+      supportsVideoInput={false}
+      audioVisualizerType="aura"
+      controlsVariant="outline"
+      onLeave={async () => {
+        try {
+          await session.end();
+        } catch {
+          // Already disconnected
+        }
+        onReturnToIdle();
+      }}
+    />
+  );
+}
 
 export default function PackPage() {
-  const router = useRouter();
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
+  const [sessionCredentials, setSessionCredentials] = useState<SessionCredentials | null>(null);
 
   const handleStart = useCallback(async () => {
     setConnecting(true);
@@ -22,12 +57,11 @@ export default function PackPage() {
       });
       const data = await res.json();
       if (data.token) {
-        const params = new URLSearchParams({
+        setSessionCredentials({
           token: data.token,
-          sessionId: data.sessionId,
-          url: data.livekitUrl || '',
+          serverUrl: data.livekitUrl || '',
         });
-        router.push(`/pack/session?${params.toString()}`);
+        setConnecting(false);
       } else {
         setError(data.error || 'Failed to connect. Please try again.');
         setConnecting(false);
@@ -37,7 +71,27 @@ export default function PackPage() {
       setError('Could not connect. Check your internet connection.');
       setConnecting(false);
     }
-  }, [router]);
+  }, []);
+
+  if (sessionCredentials) {
+    return (
+      <SessionWrapper
+        agentConfig={packConfig}
+        token={sessionCredentials.token}
+        serverUrl={sessionCredentials.serverUrl}
+        autoStart
+      >
+        <AgentLifecycleView agentConfig={packConfig} autoStart>
+          <PackActiveSession
+            onReturnToIdle={() => {
+              setSessionCredentials(null);
+              setConnecting(false);
+            }}
+          />
+        </AgentLifecycleView>
+      </SessionWrapper>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">

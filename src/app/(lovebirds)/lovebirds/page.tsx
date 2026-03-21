@@ -1,13 +1,48 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSessionContext } from '@livekit/components-react';
+import { AGENTS } from '@/lib/agents';
+import { SessionWrapper } from '@/components/shared/session-wrapper';
+import { AgentLifecycleView } from '@/components/shared/agent-lifecycle-view';
+import { AgentSessionView } from '@/components/agents-ui/agent-session-view-01';
 import { Heart } from 'lucide-react';
 
+const lovebirdsConfig = AGENTS.find((a) => a.id === 'lovebirds')!;
+
+type SessionCredentials = {
+  token: string;
+  serverUrl: string;
+};
+
+function LovebirdsActiveSession({ onReturnToIdle }: { onReturnToIdle: () => void }) {
+  const session = useSessionContext();
+
+  return (
+    <AgentSessionView
+      agentConfig={lovebirdsConfig}
+      isPreConnectBufferEnabled
+      supportsScreenShare
+      supportsChatInput
+      supportsVideoInput={false}
+      audioVisualizerType="aura"
+      controlsVariant="outline"
+      onLeave={async () => {
+        try {
+          await session.end();
+        } catch {
+          // Already disconnected
+        }
+        onReturnToIdle();
+      }}
+    />
+  );
+}
+
 export default function LovebirdsPage() {
-  const router = useRouter();
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
+  const [sessionCredentials, setSessionCredentials] = useState<SessionCredentials | null>(null);
 
   const handleStart = useCallback(async () => {
     setConnecting(true);
@@ -23,12 +58,11 @@ export default function LovebirdsPage() {
       });
       const data = await res.json();
       if (data.token) {
-        const params = new URLSearchParams({
+        setSessionCredentials({
           token: data.token,
-          sessionId: data.sessionId,
-          url: data.livekitUrl || '',
+          serverUrl: data.livekitUrl || '',
         });
-        router.push(`/lovebirds/session?${params.toString()}`);
+        setConnecting(false);
       } else {
         setError(data.error || 'Failed to connect. Please try again.');
         setConnecting(false);
@@ -38,7 +72,27 @@ export default function LovebirdsPage() {
       setError('Could not connect. Check your internet connection.');
       setConnecting(false);
     }
-  }, [router]);
+  }, []);
+
+  if (sessionCredentials) {
+    return (
+      <SessionWrapper
+        agentConfig={lovebirdsConfig}
+        token={sessionCredentials.token}
+        serverUrl={sessionCredentials.serverUrl}
+        autoStart
+      >
+        <AgentLifecycleView agentConfig={lovebirdsConfig} autoStart>
+          <LovebirdsActiveSession
+            onReturnToIdle={() => {
+              setSessionCredentials(null);
+              setConnecting(false);
+            }}
+          />
+        </AgentLifecycleView>
+      </SessionWrapper>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4">
