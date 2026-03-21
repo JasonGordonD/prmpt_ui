@@ -21,11 +21,9 @@ const ACCEPTED_TYPES = [
   'application/pdf', 'text/plain',
 ];
 
-function getUploadTopic(file: File) {
-  if (file.type.startsWith('image/')) {
-    return 'images';
-  }
-  return 'files';
+function getUploadTopic(_file: File) {
+  // All uploads go to 'images' — agents only register byte stream handlers on this topic.
+  return 'images';
 }
 
 function FileUploadButton() {
