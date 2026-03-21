@@ -296,7 +296,39 @@ export function AgentControlBar({
       throw new Error('Room is not connected');
     }
 
-    await session.room.localParticipant.sendText(message, { topic: 'lk.chat' });
+    const destinationIdentities = Array.from(session.room.remoteParticipants.values())
+      .map((participant) => participant.identity)
+      .filter(
+        (identity): identity is string =>
+          Boolean(identity) && identity !== session.room?.localParticipant.identity,
+      );
+
+    if (destinationIdentities.length === 0) {
+      throw new Error('No remote participant is connected to receive chat');
+    }
+
+    await session.room.localParticipant.sendText(message, {
+      topic: 'lk.chat',
+      destinationIdentities,
+    });
+
+    // Compatibility fallback for stacks still listening on the legacy chat topic.
+    const legacyMessage = {
+      id:
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `chat-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      timestamp: Date.now(),
+      message,
+      ignoreLegacy: false,
+    };
+    const payload = new TextEncoder().encode(JSON.stringify(legacyMessage));
+
+    await session.room.localParticipant.publishData(payload, {
+      reliable: true,
+      topic: 'lk-chat-topic',
+      destinationIdentities,
+    });
   };
 
   const visibleControls = {
