@@ -41,7 +41,7 @@ export default function JrvsSessionPage() {
   return (
     <Suspense>
       <SessionWrapper agentConfig={jrvsConfig}>
-        <AgentLifecycleView>
+        <AgentLifecycleView agentConfig={jrvsConfig}>
           <JrvsSessionUI />
         </AgentLifecycleView>
       </SessionWrapper>

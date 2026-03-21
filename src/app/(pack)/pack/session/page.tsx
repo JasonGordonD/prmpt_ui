@@ -40,7 +40,7 @@ export default function PackSessionPage() {
   return (
     <Suspense>
       <SessionWrapper agentConfig={packConfig}>
-        <AgentLifecycleView>
+        <AgentLifecycleView agentConfig={packConfig}>
           <PackSessionUI />
         </AgentLifecycleView>
       </SessionWrapper>

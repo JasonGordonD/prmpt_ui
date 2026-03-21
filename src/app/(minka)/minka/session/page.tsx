@@ -41,7 +41,7 @@ export default function MinkaSessionPage() {
   return (
     <Suspense>
       <SessionWrapper agentConfig={minkaConfig}>
-        <AgentLifecycleView>
+        <AgentLifecycleView agentConfig={minkaConfig}>
           <MinkaSessionUI />
         </AgentLifecycleView>
       </SessionWrapper>

@@ -40,7 +40,7 @@ export default function LovebirdsSessionPage() {
   return (
     <Suspense>
       <SessionWrapper agentConfig={lovebirdsConfig}>
-        <AgentLifecycleView>
+        <AgentLifecycleView agentConfig={lovebirdsConfig}>
           <LovebirdsSessionUI />
         </AgentLifecycleView>
       </SessionWrapper>

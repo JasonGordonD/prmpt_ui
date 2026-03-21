@@ -41,7 +41,7 @@ export default function CoachingSessionPage() {
   return (
     <Suspense>
       <SessionWrapper agentConfig={coachingConfig}>
-        <AgentLifecycleView>
+        <AgentLifecycleView agentConfig={coachingConfig}>
           <CoachingSessionUI />
         </AgentLifecycleView>
       </SessionWrapper>
