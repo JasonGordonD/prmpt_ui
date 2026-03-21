@@ -21,7 +21,7 @@ function LovebirdsSessionUI() {
       supportsScreenShare
       supportsChatInput
       supportsVideoInput={false}
-      audioVisualizerType="bar"
+      audioVisualizerType="aura"
       controlsVariant="outline"
       onLeave={async () => {
         try {
