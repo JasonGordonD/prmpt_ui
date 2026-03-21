@@ -1,23 +1,11 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, Courier_Prime, Inter } from 'next/font/google';
+import { Courier_Prime } from 'next/font/google';
 import './globals.css';
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-  variable: '--font-display-face',
-});
 
 const courier = Courier_Prime({
   subsets: ['latin'],
   weight: ['400', '700'],
   variable: '--font-mono-face',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-body-face',
 });
 
 export const metadata: Metadata = {
@@ -32,9 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body
-        className={`${cormorant.variable} ${courier.variable} ${inter.variable} antialiased`}
-      >
+      <body className={`${courier.variable} antialiased`}>
         {children}
       </body>
     </html>
