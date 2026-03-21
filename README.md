@@ -78,6 +78,16 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
 - JRVS currently uses named dispatch and sends `agentName="JRVS"` in token requests.
 - The Pack supports both `*_PACK` and legacy `*_THEPACK` env var names.
 
+## Frontend media updates (WO-UI-002)
+
+- Live session UI now listens for incoming image byte streams on topics:
+  - `agent-images` (agent-generated)
+  - `images` (upload round-trip confirmations)
+- User image uploads are sent via LiveKit byte stream `sendFile` on topic `images`.
+- Chat media download controls are hardened to avoid same-tab navigation (download or new tab fallback only), preserving active voice sessions.
+- Direct `.mp4` and `.webm` links in agent chat continue to render as inline video players.
+- Session routes now use the Aura audio visualizer (`audioVisualizerType="aura"`) in place of the bar visualizer without layout repositioning.
+
 ## Deployment + rollback references (2026-03-16 overhaul)
 
 ### Production deployment target
