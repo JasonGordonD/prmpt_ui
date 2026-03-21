@@ -12,6 +12,10 @@ import {
   AgentTrackToggle,
   agentTrackToggleVariants,
 } from '@/components/agents-ui/agent-track-toggle';
+import {
+  ImageUploadButton,
+  VideoInputButton,
+} from '@/components/agents-ui/agent-media-message';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import {
@@ -172,11 +176,17 @@ export interface AgentControlBarControls {
    */
   chat?: boolean;
   /**
-   * Whether to show file upload control.
+   * Whether to show the image upload button.
    *
-   * @defaultValue true (if data publish permission is granted)
+   * @defaultValue false
    */
-  upload?: boolean;
+  imageUpload?: boolean;
+  /**
+   * Whether to show the video input button.
+   *
+   * @defaultValue false
+   */
+  videoInput?: boolean;
 }
 
 export interface AgentControlBarProps extends UseInputControlsProps {
@@ -224,8 +234,12 @@ export interface AgentControlBarProps extends UseInputControlsProps {
   onIsChatOpenChange?: (open: boolean) => void;
   /** The callback for when a device error occurs. */
   onDeviceError?: (error: { source: Track.Source; error: Error }) => void;
-  /** Callback for timeline upload item state changes. */
-  onUploadItemChange?: (item: UploadTimelineItem) => void;
+  /** The callback for when the user selects an image to upload. */
+  onImageUpload?: (file: File) => void;
+  /** The callback for when the user provides a video URL. */
+  onVideoUrl?: (url: string) => void;
+  /** The callback for when the user uploads a video file. */
+  onVideoFile?: (file: File) => void;
 }
 
 /**
@@ -261,7 +275,9 @@ export function AgentControlBar({
   onDisconnect,
   onDeviceError,
   onIsChatOpenChange,
-  onUploadItemChange,
+  onImageUpload,
+  onVideoUrl,
+  onVideoFile,
   className,
   ...props
 }: AgentControlBarProps & ComponentProps<'div'>) {
@@ -292,7 +308,8 @@ export function AgentControlBar({
     screenShare: controls?.screenShare ?? publishPermissions.screenShare,
     camera: controls?.camera ?? publishPermissions.camera,
     chat: controls?.chat ?? publishPermissions.data,
-    upload: controls?.upload ?? publishPermissions.data,
+    imageUpload: controls?.imageUpload ?? false,
+    videoInput: controls?.videoInput ?? false,
   };
 
   const isEmpty = Object.values(visibleControls).every((value) => !value);
@@ -318,17 +335,6 @@ export function AgentControlBar({
     const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
     const timestamp = Date.now();
 
-    const baseItem: UploadTimelineItem = {
-      id: uploadId,
-      name: file.name,
-      mimeType: file.type,
-      timestamp,
-      previewUrl,
-      senderLabel: 'You',
-      status: 'uploading',
-    };
-
-    onUploadItemChange?.(baseItem);
     setUploadStatus('uploading');
 
     try {
@@ -355,17 +361,8 @@ export function AgentControlBar({
         throw new Error('File delivery failed for all topics');
       }
 
-      onUploadItemChange?.({
-        ...baseItem,
-        status: 'sent',
-      });
       setUploadStatus('sent');
     } catch {
-      onUploadItemChange?.({
-        ...baseItem,
-        status: 'failed',
-        errorMessage: 'Upload failed to reach the session. Please try again.',
-      });
       setUploadStatus('failed');
     } finally {
       window.setTimeout(() => setUploadStatus('idle'), 1800);
@@ -478,32 +475,23 @@ export function AgentControlBar({
           </Toggle>
         )}
 
-        {/* Upload File */}
-        {visibleControls.upload && (
-          <Toggle
-            variant={variant === 'outline' ? 'outline' : 'default'}
-            pressed={uploadStatus === 'uploading'}
-            disabled={!isConnected || uploadStatus === 'uploading'}
-            aria-label="Upload file"
-            onPressedChange={() => {
-              uploadInputRef.current?.click();
-            }}
-            className={agentTrackToggleVariants({
-              variant: variant === 'outline' ? 'outline' : 'default',
-              className: cn(variant === 'livekit' && [LK_TOGGLE_VARIANT_2, 'rounded-full']),
-            })}
-            title={
-              uploadStatus === 'uploading'
-                ? 'Uploading...'
-                : uploadStatus === 'sent'
-                  ? 'Upload complete'
-                  : uploadStatus === 'failed'
-                    ? 'Upload failed'
-                    : 'Upload file'
-            }
-          >
-            {uploadStatus === 'uploading' ? <Loader className="animate-spin" /> : <Paperclip />}
-          </Toggle>
+        {/* Image Upload */}
+        {visibleControls.imageUpload && onImageUpload && (
+          <ImageUploadButton
+            variant={variant === 'livekit' ? 'livekit' : 'default'}
+            onFileSelected={onImageUpload}
+            disabled={!isConnected}
+          />
+        )}
+
+        {/* Video Input */}
+        {visibleControls.videoInput && onVideoUrl && onVideoFile && (
+          <VideoInputButton
+            variant={variant === 'livekit' ? 'livekit' : 'default'}
+            onVideoUrl={onVideoUrl}
+            onVideoFile={onVideoFile}
+            disabled={!isConnected}
+          />
         )}
       </div>
 

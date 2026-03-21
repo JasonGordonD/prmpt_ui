@@ -1,19 +1,20 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
-import { useAgent, useSessionContext, useSessionMessages, useTracks } from '@livekit/components-react';
-import { type DataPacket_Kind, type RemoteParticipant, RoomEvent, Track } from 'livekit-client';
-import {
-  AgentChatTranscript,
-  type GeneratedImageTimelineItem,
-  type IngressVideoTrackItem,
-} from '@/components/agents-ui/agent-chat-transcript';
+import { useAgent, useLocalParticipant, useRoomContext, useSessionContext, useSessionMessages } from '@livekit/components-react';
+import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
   type AgentControlBarControls,
-  type UploadTimelineItem,
 } from '@/components/agents-ui/agent-control-bar';
+import {
+  UploadingImage,
+  VideoPlayer,
+  type MediaItem,
+} from '@/components/agents-ui/agent-media-message';
+import { SessionExport } from '@/components/agents-ui/session-export';
+import { useRealtimeMediaData } from '@/hooks/agents-ui/use-realtime-media-data';
 import { Shimmer } from '@/components/ai-elements/shimmer';
 import { cn } from '@/lib/utils';
 import { TileLayout } from './tile-view';
@@ -88,8 +89,6 @@ const SHIMMER_MOTION_PROPS: MotionProps = {
   exit: 'hidden',
 };
 
-const GENERATED_IMAGE_DEDUP_WINDOW_MS = 7000;
-
 interface FadeProps {
   top?: boolean;
   bottom?: boolean;
@@ -110,58 +109,24 @@ export function Fade({ top = false, bottom = false, className }: FadeProps) {
 }
 
 export interface AgentSessionView_01Props {
-  /**
-   * Message shown above the controls before the first chat message is sent.
-   *
-   * @default 'Agent is listening, ask it a question'
-   */
   preConnectMessage?: string;
-  /**
-   * Enables or disables the chat toggle and transcript input controls.
-   *
-   * @default true
-   */
   supportsChatInput?: boolean;
-  /**
-   * Enables or disables camera controls in the bottom control bar.
-   *
-   * @default true
-   */
   supportsVideoInput?: boolean;
-  /**
-   * Enables or disables screen sharing controls in the bottom control bar.
-   *
-   * @default true
-   */
   supportsScreenShare?: boolean;
-  /**
-   * Shows a pre-connect buffer state with a shimmer message before messages appear.
-   *
-   * @default true
-   */
+  supportsImageUpload?: boolean;
+  supportsVideoPlayer?: boolean;
   isPreConnectBufferEnabled?: boolean;
 
-  /** Selects the visualizer style rendered in the main tile area. */
   audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
-  /** Primary hex color used by supported audio visualizer variants. */
   audioVisualizerColor?: `#${string}`;
-  /** Hue shift intensity used by certain visualizers. */
   audioVisualizerColorShift?: number;
-  /** Number of bars to render when `audioVisualizerType` is `bar`. */
   audioVisualizerBarCount?: number;
-  /** Number of rows in the visualizer when `audioVisualizerType` is `grid`. */
   audioVisualizerGridRowCount?: number;
-  /** Number of columns in the visualizer when `audioVisualizerType` is `grid`. */
   audioVisualizerGridColumnCount?: number;
-  /** Number of radial bars when `audioVisualizerType` is `radial`. */
   audioVisualizerRadialBarCount?: number;
-  /** Base radius of the radial visualizer when `audioVisualizerType` is `radial`. */
   audioVisualizerRadialRadius?: number;
-  /** Stroke width of the wave path when `audioVisualizerType` is `wave`. */
   audioVisualizerWaveLineWidth?: number;
-  /** Optional class name merged onto the outer `<section>` container. */
   className?: string;
-  /** Optional disconnect handler overriding session.end */
   onDisconnect?: () => void;
 }
 
@@ -170,6 +135,8 @@ export function AgentSessionView_01({
   supportsChatInput = true,
   supportsVideoInput = true,
   supportsScreenShare = true,
+  supportsImageUpload = false,
+  supportsVideoPlayer = false,
   isPreConnectBufferEnabled = true,
 
   audioVisualizerType,
@@ -186,16 +153,88 @@ export function AgentSessionView_01({
   className,
   ...props
 }: React.ComponentProps<'section'> & AgentSessionView_01Props) {
+  const room = useRoomContext();
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const messagesRef = useRef(messages);
-  const generatedImageObjectUrlsRef = useRef<Set<string>>(new Set());
   const [chatOpen, setChatOpen] = useState(false);
-  const [uploadedItems, setUploadedItems] = useState<UploadTimelineItem[]>([]);
-  const [receivedImages, setReceivedImages] = useState<string[]>([]);
-  const [generatedImages, setGeneratedImages] = useState<GeneratedImageTimelineItem[]>([]);
-  const cameraAndUnknownTracks = useTracks([Track.Source.Camera, Track.Source.Unknown]);
   const { state: agentState } = useAgent();
+  const { localParticipant } = useLocalParticipant();
+
+  // Media data from byte streams
+  const { incomingByteStreams } = useRealtimeMediaData({ chatOpen });
+
+  // Uploading image state (optimistic thumbnail)
+  const [uploadingFile, setUploadingFile] = useState<File | null>(null);
+
+  // Video player state
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [videoMimeType, setVideoMimeType] = useState<string | undefined>();
+  const videoObjectUrlRef = useRef<string | null>(null);
+
+  // Convert incoming byte streams to MediaItem[]
+  const mediaItems = useMemo<MediaItem[]>(() => {
+    return incomingByteStreams
+      .filter((s) => s.mimeType.startsWith('image/') || s.mimeType.startsWith('video/'))
+      .map((s) => ({
+        ...s,
+        from: s.fromIdentity === localParticipant.identity ? ('user' as const) : ('assistant' as const),
+        receivedAt: Date.now(),
+      }));
+  }, [incomingByteStreams, localParticipant.identity]);
+
+  // Image upload handler
+  const handleImageUpload = useCallback(
+    async (file: File) => {
+      setUploadingFile(file);
+      // Auto-open chat to show the image
+      if (!chatOpen) setChatOpen(true);
+
+      try {
+        await room.localParticipant.sendFile(file, {
+          mimeType: file.type,
+          topic: 'images',
+        });
+      } catch (err) {
+        console.error('[session-view] image upload failed:', err);
+      } finally {
+        setUploadingFile(null);
+      }
+    },
+    [room, chatOpen],
+  );
+
+  // Video URL handler
+  const handleVideoUrl = useCallback((url: string) => {
+    // Clean up previous object URL
+    if (videoObjectUrlRef.current) {
+      URL.revokeObjectURL(videoObjectUrlRef.current);
+      videoObjectUrlRef.current = null;
+    }
+    setVideoMimeType(undefined);
+    setVideoSrc(url);
+  }, []);
+
+  // Video file handler
+  const handleVideoFile = useCallback((file: File) => {
+    // Clean up previous object URL
+    if (videoObjectUrlRef.current) {
+      URL.revokeObjectURL(videoObjectUrlRef.current);
+    }
+    const url = URL.createObjectURL(file);
+    videoObjectUrlRef.current = url;
+    setVideoMimeType(file.type);
+    setVideoSrc(url);
+  }, []);
+
+  // Cleanup video object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (videoObjectUrlRef.current) {
+        URL.revokeObjectURL(videoObjectUrlRef.current);
+      }
+    };
+  }, []);
 
   const controls: AgentControlBarControls = {
     leave: true,
@@ -203,220 +242,13 @@ export function AgentSessionView_01({
     chat: supportsChatInput,
     camera: supportsVideoInput,
     screenShare: supportsScreenShare,
-    upload: true,
+    imageUpload: supportsImageUpload,
+    videoInput: supportsVideoPlayer,
   };
-
-  const handleUploadItemChange = (nextItem: UploadTimelineItem) => {
-    setUploadedItems((current) => {
-      const existing = current.find((item) => item.id === nextItem.id);
-      if (existing) {
-        return current.map((item) => (item.id === nextItem.id ? { ...item, ...nextItem } : item));
-      }
-      return [...current, nextItem];
-    });
-  };
-
-  const ingressVideoTracks = useMemo<IngressVideoTrackItem[]>(() => {
-    const parseTitle = (metadata?: string): string | undefined => {
-      if (!metadata) return undefined;
-      try {
-        const parsed = JSON.parse(metadata) as { title?: unknown };
-        if (typeof parsed.title === 'string' && parsed.title.trim()) {
-          return parsed.title.trim();
-        }
-      } catch {
-        // Metadata can be plain text; ignore parse failures.
-      }
-      return undefined;
-    };
-
-    return cameraAndUnknownTracks
-      .filter((trackRef) => {
-        const identity = trackRef.participant.identity ?? '';
-        return identity.startsWith('video-') && !trackRef.participant.isLocal;
-      })
-      .map((trackRef) => {
-        const sid = trackRef.publication.trackSid || trackRef.publication.track?.sid || trackRef.source;
-        return {
-          id: `${trackRef.participant.identity}:${sid}`,
-          trackRef,
-          title: parseTitle(trackRef.participant.metadata),
-        };
-      });
-  }, [cameraAndUnknownTracks]);
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
-
-  useEffect(() => {
-    const room = session.room;
-    if (!room) return;
-
-    const isBlobUrl = (url: string) => url.startsWith('blob:');
-
-    const revokeTrackedGeneratedImageObjectUrl = (url: string) => {
-      if (!generatedImageObjectUrlsRef.current.delete(url)) {
-        return;
-      }
-      URL.revokeObjectURL(url);
-    };
-
-    const appendGeneratedImage = (incomingUrl: string, source: 'byte-stream' | 'url-payload') => {
-      const url = incomingUrl.trim();
-      if (!url) {
-        return;
-      }
-
-      if (source === 'url-payload') {
-        setReceivedImages((prev) => (prev.includes(url) ? prev : [...prev, url]));
-      }
-
-      const latestAgentMessage = [...messagesRef.current]
-        .reverse()
-        .find((message) => !message.from?.isLocal);
-      const triggerMessageId = latestAgentMessage?.id ?? null;
-      const timestamp = Date.now();
-      let blobUrlToRevoke: string | null = null;
-
-      setGeneratedImages((prev) => {
-        const existingExactUrl = prev.find((item) => item.url === url);
-        if (existingExactUrl) {
-          return prev;
-        }
-
-        let candidateIndex = -1;
-        for (let index = prev.length - 1; index >= 0; index -= 1) {
-          if (source !== 'url-payload') {
-            break;
-          }
-
-          const item = prev[index];
-          if (item.triggerMessageId !== triggerMessageId) {
-            continue;
-          }
-          if (timestamp - item.timestamp > GENERATED_IMAGE_DEDUP_WINDOW_MS) {
-            continue;
-          }
-
-          if (isBlobUrl(item.url)) {
-            candidateIndex = index;
-            break;
-          }
-        }
-
-        if (candidateIndex >= 0) {
-          const existingBlob = prev[candidateIndex];
-          blobUrlToRevoke = existingBlob.url;
-          const replaced = [...prev];
-          replaced[candidateIndex] = {
-            ...existingBlob,
-            url,
-            timestamp,
-          };
-          return replaced;
-        }
-
-        return [
-          ...prev,
-          {
-            id:
-              typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                ? crypto.randomUUID()
-                : `generated-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            url,
-            timestamp,
-            triggerMessageId,
-          },
-        ];
-      });
-
-      if (blobUrlToRevoke) {
-        revokeTrackedGeneratedImageObjectUrl(blobUrlToRevoke);
-      }
-    };
-
-    const revokeGeneratedImageObjectUrls = () => {
-      for (const objectUrl of generatedImageObjectUrlsRef.current) {
-        URL.revokeObjectURL(objectUrl);
-      }
-      generatedImageObjectUrlsRef.current.clear();
-    };
-
-    const processImageByteStream = async (
-      reader: {
-        info: { id: string; name: string; topic: string; mimeType?: string; size?: number };
-        readAll: () => Promise<Uint8Array[]>;
-      },
-    ) => {
-      try {
-        const chunks = await reader.readAll();
-        const totalSize = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
-        const merged = new Uint8Array(totalSize);
-        let offset = 0;
-        for (const chunk of chunks) {
-          merged.set(chunk, offset);
-          offset += chunk.byteLength;
-        }
-
-        const blob = new Blob([merged], {
-          type: reader.info.mimeType || 'application/octet-stream',
-        });
-        const objectUrl = URL.createObjectURL(blob);
-        generatedImageObjectUrlsRef.current.add(objectUrl);
-        appendGeneratedImage(objectUrl, 'byte-stream');
-      } catch (error) {
-        console.warn('Ignoring malformed image byte stream payload', error);
-      }
-    };
-
-    const handleDataReceived = (
-      payload: Uint8Array,
-      _participant?: RemoteParticipant,
-      _kind?: DataPacket_Kind,
-      topic?: string,
-    ) => {
-      if (topic !== 'image_egress') {
-        return;
-      }
-
-      try {
-        const decoded = new TextDecoder().decode(payload);
-        const parsed = JSON.parse(decoded) as { type?: string; url?: string };
-        if (parsed.type !== 'image_url' || typeof parsed.url !== 'string') {
-          return;
-        }
-
-        const url = parsed.url.trim();
-        if (!url) {
-          return;
-        }
-
-        appendGeneratedImage(url, 'url-payload');
-      } catch (error) {
-        console.warn('Ignoring malformed image_egress payload', error);
-      }
-    };
-
-    const handleDisconnected = () => {
-      revokeGeneratedImageObjectUrls();
-      setReceivedImages([]);
-      setGeneratedImages([]);
-    };
-
-    room.registerByteStreamHandler('agent-images', processImageByteStream);
-    room.registerByteStreamHandler('images', processImageByteStream);
-    room.on(RoomEvent.DataReceived, handleDataReceived);
-    room.on(RoomEvent.Disconnected, handleDisconnected);
-
-    return () => {
-      room.unregisterByteStreamHandler('agent-images');
-      room.unregisterByteStreamHandler('images');
-      room.off(RoomEvent.DataReceived, handleDataReceived);
-      room.off(RoomEvent.Disconnected, handleDisconnected);
-      revokeGeneratedImageObjectUrls();
-    };
-  }, [session.room]);
 
   return (
     <section
@@ -424,10 +256,38 @@ export function AgentSessionView_01({
       className={cn('bg-background relative z-10 h-full w-full overflow-hidden', className)}
       {...props}
     >
-      <Fade top className="absolute inset-x-4 top-0 z-20 h-40" />
-      {/* transcript */}
+      <Fade top className="absolute inset-x-4 top-0 z-10 h-40" />
 
-      <div className="pointer-events-auto absolute top-0 bottom-[102px] z-30 flex w-full flex-col md:bottom-[118px]">
+      {/* Video player panel (above transcript, below top fade) */}
+      {videoSrc && (
+        <div className="absolute inset-x-0 top-4 z-20 mx-auto max-w-2xl px-4 md:px-0">
+          <div className="relative">
+            <VideoPlayer src={videoSrc} mimeType={videoMimeType} className="w-full" />
+            <button
+              type="button"
+              onClick={() => {
+                setVideoSrc(null);
+                if (videoObjectUrlRef.current) {
+                  URL.revokeObjectURL(videoObjectUrlRef.current);
+                  videoObjectUrlRef.current = null;
+                }
+              }}
+              className="absolute -top-2 -right-2 z-30 rounded-full bg-background border border-border p-1 text-muted-foreground shadow-md transition-colors hover:bg-accent hover:text-foreground"
+              aria-label="Close video player"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* transcript */}
+      <div
+        className={cn(
+          'pointer-events-auto absolute top-0 bottom-[102px] z-30 flex w-full flex-col md:bottom-[118px]',
+          videoSrc && 'top-[340px]',
+        )}
+      >
         <AnimatePresence>
           {chatOpen && (
             <motion.div
@@ -437,16 +297,20 @@ export function AgentSessionView_01({
               <AgentChatTranscript
                 agentState={agentState}
                 messages={messages}
-                uploadedItems={uploadedItems}
-                receivedImages={receivedImages}
-                generatedImages={generatedImages}
-                ingressVideoTracks={ingressVideoTracks}
-                className="mx-auto h-full w-full max-w-2xl [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-20 md:[&>div>div]:px-6"
+                mediaItems={mediaItems}
+                className="mx-auto w-full max-w-2xl [&_.is-user>div]:rounded-[22px] [&>div>div]:px-4 [&>div>div]:pt-40 md:[&>div>div]:px-6"
               />
+              {/* Optimistic uploading thumbnail */}
+              {uploadingFile && (
+                <div className="mx-auto w-full max-w-2xl px-4 md:px-6">
+                  <UploadingImage file={uploadingFile} />
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
       {/* Tile layout */}
       <TileLayout
         chatOpen={chatOpen}
@@ -460,6 +324,7 @@ export function AgentSessionView_01({
         audioVisualizerGridColumnCount={audioVisualizerGridColumnCount}
         audioVisualizerWaveLineWidth={audioVisualizerWaveLineWidth}
       />
+
       {/* Bottom */}
       <motion.div
         {...BOTTOM_VIEW_MOTION_PROPS}
@@ -483,15 +348,27 @@ export function AgentSessionView_01({
         )}
         <div className="bg-background relative mx-auto max-w-2xl pb-2 md:pb-4">
           <Fade bottom className="absolute inset-x-0 top-0 h-4 -translate-y-full" />
-          <AgentControlBar
-            variant="livekit"
-            controls={controls}
-            isChatOpen={chatOpen}
-            isConnected={session.isConnected}
-            onDisconnect={onDisconnect ?? session.end}
-            onIsChatOpenChange={setChatOpen}
-            onUploadItemChange={handleUploadItemChange}
-          />
+          <div className="flex items-end gap-2">
+            <AgentControlBar
+              variant="livekit"
+              controls={controls}
+              isChatOpen={chatOpen}
+              isConnected={session.isConnected}
+              onDisconnect={onDisconnect ?? session.end}
+              onIsChatOpenChange={setChatOpen}
+              onImageUpload={supportsImageUpload ? handleImageUpload : undefined}
+              onVideoUrl={supportsVideoPlayer ? handleVideoUrl : undefined}
+              onVideoFile={supportsVideoPlayer ? handleVideoFile : undefined}
+              className="flex-1"
+            />
+            <SessionExport
+              messages={messages}
+              mediaStreams={incomingByteStreams}
+              agentName={undefined}
+              variant="control-bar"
+              className="mb-[3px]"
+            />
+          </div>
         </div>
       </motion.div>
     </section>

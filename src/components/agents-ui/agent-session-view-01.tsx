@@ -12,6 +12,8 @@ type AgentSessionViewProps = {
   supportsScreenShare?: boolean;
   supportsChatInput?: boolean;
   supportsVideoInput?: boolean;
+  supportsImageUpload?: boolean;
+  supportsVideoPlayer?: boolean;
   audioVisualizerType?: 'bar' | 'wave' | 'grid' | 'radial' | 'aura';
   audioVisualizerColor?: `#${string}`;
   audioVisualizerColorShift?: number;
@@ -33,7 +35,9 @@ export function AgentSessionView({
   supportsScreenShare = true,
   supportsChatInput = true,
   supportsVideoInput = false,
-  audioVisualizerType = 'bar',
+  supportsImageUpload = false,
+  supportsVideoPlayer = false,
+  audioVisualizerType = 'aura',
   audioVisualizerColor,
   audioVisualizerColorShift,
   audioVisualizerBarCount = 24,
@@ -64,6 +68,8 @@ export function AgentSessionView({
       isPreConnectBufferEnabled={isPreConnectBufferEnabled}
       supportsChatInput={supportsChatInput}
       supportsVideoInput={supportsVideoInput}
+      supportsImageUpload={supportsImageUpload}
+      supportsVideoPlayer={supportsVideoPlayer}
       supportsScreenShare={supportsScreenShare}
       audioVisualizerType={audioVisualizerType}
       audioVisualizerColor={visualizerColor}

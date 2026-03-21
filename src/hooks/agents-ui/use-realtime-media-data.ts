@@ -85,11 +85,13 @@ export function useRealtimeMediaData({ chatOpen = true }: UseRealtimeMediaDataOp
     room.registerByteStreamHandler('images', processByteStream);
     room.registerByteStreamHandler('files', processByteStream);
     room.registerByteStreamHandler('uploads', processByteStream);
+    room.registerByteStreamHandler('agent_images', processByteStream);
 
     return () => {
       room.unregisterByteStreamHandler('images');
       room.unregisterByteStreamHandler('files');
       room.unregisterByteStreamHandler('uploads');
+      room.unregisterByteStreamHandler('agent_images');
     };
   }, [room]);
 
