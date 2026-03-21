@@ -94,6 +94,24 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
 - Non-image uploads continue to use non-image topics (`files` / `uploads`) depending on component flow.
 - Upload UI "sent"/"failed" states are tied to `sendFile` completion outcomes (byte-stream send success/failure), not text metadata acknowledgements.
 
+## Typography system (2026 overhaul)
+
+- Global font stack:
+  - **Headers/titles/stat-scale text:** Space Grotesk (600; h3 uses 500)
+  - **Body/UI text:** DM Sans (400 default, 500 emphasis)
+  - **Code/monospace:** Courier Prime (unchanged for code semantics)
+- Google font families are loaded from:
+  - `https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&family=Space+Grotesk:wght@400;500;600&display=swap`
+- Global scale baseline:
+  - h1: 32px
+  - h2: 22px
+  - h3: 16px
+  - body: 15px, line-height 1.7
+  - small: 13px
+  - caption/metadata: 11px
+- Global text legibility backstop for aura overlap:
+  - `text-shadow: 0 0 20px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.3)`
+
 ## Deployment + rollback references (2026-03-16 overhaul)
 
 ### Production deployment target
