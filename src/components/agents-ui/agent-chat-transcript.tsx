@@ -13,6 +13,36 @@ import { AgentChatIndicator } from '@/components/agents-ui/agent-chat-indicator'
 import { MediaMessage, type MediaItem } from '@/components/agents-ui/agent-media-message';
 import { AnimatePresence } from 'motion/react';
 
+const URL_PATTERN = /(https?:\/\/[^\s]+)/gi;
+
+function isHttpUrl(value: string) {
+  return /^https?:\/\/\S+$/i.test(value);
+}
+
+function renderMessageWithLinks(message: string) {
+  return message.split(URL_PATTERN).map((segment, index) => {
+    if (!isHttpUrl(segment)) {
+      return (
+        <span key={`text-${index}`}>
+          {segment}
+        </span>
+      );
+    }
+
+    return (
+      <a
+        key={`url-${index}`}
+        href={segment}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline underline-offset-2 hover:opacity-90"
+      >
+        {segment}
+      </a>
+    );
+  });
+}
+
 type TimelineEntry =
   | { kind: 'text'; msg: ReceivedMessage }
   | { kind: 'media'; item: MediaItem };
@@ -75,7 +105,7 @@ export function AgentChatTranscript({
           return (
             <Message key={id} title={title} from={messageOrigin}>
               <MessageContent>
-                <span>{message}</span>
+                <p className="whitespace-pre-wrap break-words">{renderMessageWithLinks(message)}</p>
               </MessageContent>
             </Message>
           );

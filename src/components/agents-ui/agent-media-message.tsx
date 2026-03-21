@@ -286,7 +286,7 @@ export function MediaMessage({ item }: { item: MediaItem }) {
 // Image Upload Button (for control bar)
 // ---------------------------------------------------------------------------
 
-const IMAGE_ACCEPT = ['image/png', 'image/jpeg', 'image/webp'];
+const IMAGE_ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 export interface ImageUploadButtonProps {
   onFileSelected: (file: File) => void;

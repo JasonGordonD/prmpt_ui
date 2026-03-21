@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { useSessionContext } from '@livekit/components-react';
-import { ConnectionState, Track } from 'livekit-client';
-import { Loader, MessageSquareTextIcon, SendHorizontal } from 'lucide-react';
+import { ConnectionState, RoomEvent, Track } from 'livekit-client';
+import { Loader, MessageSquareTextIcon, Paperclip, SendHorizontal } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { AgentDisconnectButton } from '@/components/agents-ui/agent-disconnect-button';
@@ -46,6 +46,8 @@ const LK_TOGGLE_VARIANT_2 = [
 ];
 
 const ACCEPTED_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain'];
+const ACCEPTED_CHAT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_CHAT_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 function getUploadTopicsForFile(file: File): string[] {
   if (file.type.startsWith('image/')) {
@@ -67,29 +69,109 @@ export type UploadTimelineItem = {
 
 interface AgentChatInputProps {
   disabled?: boolean;
-  onSend?: (message: string) => void;
+  onSend?: (message: string) => Promise<void> | void;
+  onImageUpload?: (file: File) => Promise<void> | void;
   className?: string;
 }
 
-function AgentChatInput({ disabled = false, onSend = async () => {}, className }: AgentChatInputProps) {
+function AgentChatInput({
+  disabled = false,
+  onSend = async () => {},
+  onImageUpload,
+  className,
+}: AgentChatInputProps) {
+  const session = useSessionContext();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const bufferTimerRef = useRef<number | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isBufferingMessage, setIsBufferingMessage] = useState(false);
+  const [bufferedMessage, setBufferedMessage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [inlineError, setInlineError] = useState('');
   const [message, setMessage] = useState<string>('');
-  const isDisabled = disabled || isSending || message.trim().length === 0;
+  const isDisabled = disabled || isSending || isBufferingMessage || message.trim().length === 0;
+
+  const clearBufferTimer = () => {
+    if (bufferTimerRef.current !== null) {
+      window.clearTimeout(bufferTimerRef.current);
+      bufferTimerRef.current = null;
+    }
+  };
+
+  const hasRemoteParticipant = () => {
+    const room = session.room;
+    if (!room || room.state !== ConnectionState.Connected) {
+      return false;
+    }
+    return Array.from(room.remoteParticipants.values()).some(
+      (participant) =>
+        participant.identity && participant.identity !== room.localParticipant.identity,
+    );
+  };
+
+  const queueMessageUntilAgentConnects = (queuedMessage: string) => {
+    clearBufferTimer();
+    setInlineError('');
+    setIsBufferingMessage(true);
+    setBufferedMessage(queuedMessage);
+    setMessage('');
+
+    bufferTimerRef.current = window.setTimeout(() => {
+      setIsBufferingMessage(false);
+      setBufferedMessage(null);
+      setMessage(queuedMessage);
+      setInlineError('Agent not connected yet');
+      bufferTimerRef.current = null;
+    }, 5000);
+  };
+
+  const sendNow = async (outgoingMessage: string) => {
+    try {
+      setIsSending(true);
+      await onSend(outgoingMessage);
+      setInlineError('');
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.toLowerCase().includes('no remote participant')) {
+        return false;
+      }
+      setInlineError('Failed to send message');
+      return false;
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleSend = async () => {
     if (isDisabled) {
       return;
     }
 
-    try {
-      setIsSending(true);
-      await onSend(message.trim());
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) {
+      return;
+    }
+
+    if (!session.room || session.room.state !== ConnectionState.Connected) {
+      setInlineError('Agent not connected yet');
+      return;
+    }
+
+    if (!hasRemoteParticipant()) {
+      queueMessageUntilAgentConnects(trimmedMessage);
+      return;
+    }
+
+    const sent = await sendNow(trimmedMessage);
+    if (sent) {
       setMessage('');
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSending(false);
+      return;
+    }
+
+    if (!hasRemoteParticipant()) {
+      queueMessageUntilAgentConnects(trimmedMessage);
     }
   };
 
@@ -105,34 +187,152 @@ function AgentChatInput({ disabled = false, onSend = async () => {}, className }
     await handleSend();
   };
 
+  const handleImageFile = async (file: File) => {
+    if (!onImageUpload) {
+      return;
+    }
+    if (!ACCEPTED_CHAT_IMAGE_TYPES.includes(file.type)) {
+      setInlineError('Only JPEG, PNG, WebP, or GIF images are supported');
+      return;
+    }
+    if (file.size > MAX_CHAT_IMAGE_SIZE_BYTES) {
+      setInlineError('Image is too large (max 10MB)');
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      setInlineError('');
+      await onImageUpload(file);
+    } catch {
+      setInlineError('Image upload failed');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleImageInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) {
+      return;
+    }
+    await handleImageFile(selectedFile);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageItem = Array.from(event.clipboardData.items).find((item) =>
+      item.type.startsWith('image/'),
+    );
+    if (!imageItem) {
+      return;
+    }
+
+    const pastedFile = imageItem.getAsFile();
+    if (!pastedFile) {
+      return;
+    }
+
+    event.preventDefault();
+    void handleImageFile(pastedFile);
+  };
+
+  useEffect(() => {
+    if (!bufferedMessage || !session.room) {
+      return;
+    }
+
+    const attemptFlushBufferedMessage = async () => {
+      if (!bufferedMessage || !hasRemoteParticipant()) {
+        return;
+      }
+
+      clearBufferTimer();
+      setBufferedMessage(null);
+      setIsBufferingMessage(false);
+
+      const sent = await sendNow(bufferedMessage);
+      if (!sent) {
+        setMessage(bufferedMessage);
+        setInlineError('Agent not connected yet');
+      }
+    };
+
+    void attemptFlushBufferedMessage();
+    session.room.on(RoomEvent.ParticipantConnected, attemptFlushBufferedMessage);
+
+    return () => {
+      session.room?.off(RoomEvent.ParticipantConnected, attemptFlushBufferedMessage);
+    };
+  }, [bufferedMessage, session.room]);
+
   useEffect(() => {
     if (disabled) return;
     inputRef.current?.focus();
   }, [disabled]);
 
+  useEffect(() => {
+    return () => {
+      clearBufferTimer();
+    };
+  }, []);
+
   return (
-    <div className={cn('flex min-w-0 grow items-center gap-2 text-sm', className)}>
-      <textarea
-        autoFocus
-        ref={inputRef}
-        value={message}
-        disabled={disabled || isSending}
-        placeholder="Type something..."
-        onKeyDown={handleKeyDown}
-        onChange={(e) => setMessage(e.target.value)}
-        className="field-sizing-content max-h-20 min-h-9 flex-1 resize-none rounded-md bg-transparent px-2 py-2 leading-tight [scrollbar-width:thin] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-      />
-      <Button
-        size="icon-sm"
-        type="button"
-        disabled={isDisabled}
-        variant={isDisabled ? 'secondary' : 'default'}
-        title={isSending ? 'Sending...' : 'Send'}
-        onClick={handleButtonClick}
-        className="shrink-0 rounded-full disabled:cursor-not-allowed"
-      >
-        {isSending ? <Loader className="animate-spin" /> : <SendHorizontal />}
-      </Button>
+    <div className={cn('flex min-w-0 grow flex-col gap-1 text-sm', className)}>
+      <div className="flex min-w-0 items-center gap-2">
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept={ACCEPTED_CHAT_IMAGE_TYPES.join(',')}
+          onChange={(event) => {
+            void handleImageInputChange(event);
+          }}
+          className="hidden"
+          aria-hidden="true"
+        />
+        <textarea
+          autoFocus
+          ref={inputRef}
+          value={message}
+          disabled={disabled || isSending || isBufferingMessage}
+          placeholder="Type something..."
+          onPaste={handlePaste}
+          onKeyDown={handleKeyDown}
+          onChange={(e) => setMessage(e.target.value)}
+          className="field-sizing-content max-h-20 min-h-9 flex-1 resize-none rounded-md bg-transparent px-2 py-2 leading-tight [scrollbar-width:thin] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        {onImageUpload && (
+          <Button
+            size="icon-sm"
+            type="button"
+            disabled={disabled || isUploadingImage}
+            variant="secondary"
+            title="Upload image"
+            onClick={() => imageInputRef.current?.click()}
+            className="shrink-0 rounded-full disabled:cursor-not-allowed"
+          >
+            {isUploadingImage ? <Loader className="animate-spin" /> : <Paperclip />}
+          </Button>
+        )}
+        <Button
+          size="icon-sm"
+          type="button"
+          disabled={isDisabled}
+          variant={isDisabled ? 'secondary' : 'default'}
+          title={isSending ? 'Sending...' : 'Send'}
+          onClick={handleButtonClick}
+          className="shrink-0 rounded-full disabled:cursor-not-allowed"
+        >
+          {isSending ? <Loader className="animate-spin" /> : <SendHorizontal />}
+        </Button>
+      </div>
+      {isBufferingMessage ? (
+        <p className="px-1 text-[11px] text-muted-foreground">Waiting for agent connection…</p>
+      ) : inlineError ? (
+        <p className="px-1 text-[11px] text-destructive">{inlineError}</p>
+      ) : null}
     </div>
   );
 }
@@ -525,6 +725,7 @@ export function AgentControlBar({
           <AgentChatInput
             disabled={!isConnected}
             onSend={handleSendMessage}
+            onImageUpload={onImageUpload}
             className={cn(variant === 'livekit' && '[&_button]:rounded-full')}
           />
         </div>

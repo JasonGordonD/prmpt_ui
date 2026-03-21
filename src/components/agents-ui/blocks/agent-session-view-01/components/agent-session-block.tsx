@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
 import { useAgent, useLocalParticipant, useRoomContext, useSessionContext, useSessionMessages } from '@livekit/components-react';
-import { type DataPacket_Kind, type RemoteParticipant, RoomEvent } from 'livekit-client';
+import { ConnectionState, type DataPacket_Kind, type RemoteParticipant, RoomEvent } from 'livekit-client';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
@@ -19,6 +19,9 @@ import { useRealtimeMediaData } from '@/hooks/agents-ui/use-realtime-media-data'
 import { Shimmer } from '@/components/ai-elements/shimmer';
 import { cn } from '@/lib/utils';
 import { TileLayout } from './tile-view';
+
+const ACCEPTED_CHAT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_CHAT_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 function parseImageEgressPayload(rawPayload: Uint8Array): string | null {
   let decoded = '';
@@ -211,6 +214,8 @@ export function AgentSessionView_01({
   // Media data from byte streams
   const { incomingByteStreams } = useRealtimeMediaData({ chatOpen });
   const [egressMediaItems, setEgressMediaItems] = useState<MediaItem[]>([]);
+  const [localUploadedImageItems, setLocalUploadedImageItems] = useState<MediaItem[]>([]);
+  const localImageUrlsRef = useRef<string[]>([]);
 
   // Uploading image state (optimistic thumbnail)
   const [uploadingFile, setUploadingFile] = useState<File | null>(null);
@@ -230,8 +235,9 @@ export function AgentSessionView_01({
         receivedAt: s.receivedAt,
       }));
 
-    return [...byteStreamMediaItems, ...egressMediaItems].sort((a, b) => a.receivedAt - b.receivedAt);
-  }, [incomingByteStreams, egressMediaItems, localParticipant.identity]);
+    return [...byteStreamMediaItems, ...egressMediaItems, ...localUploadedImageItems]
+      .sort((a, b) => a.receivedAt - b.receivedAt);
+  }, [incomingByteStreams, egressMediaItems, localUploadedImageItems, localParticipant.identity]);
 
   // Image upload handler
   const handleImageUpload = useCallback(
@@ -241,17 +247,59 @@ export function AgentSessionView_01({
       if (!chatOpen) setChatOpen(true);
 
       try {
+        if (!ACCEPTED_CHAT_IMAGE_TYPES.includes(file.type)) {
+          throw new Error('Only JPEG, PNG, WebP, or GIF images are supported');
+        }
+        if (file.size > MAX_CHAT_IMAGE_SIZE_BYTES) {
+          throw new Error('Image is too large (max 10MB)');
+        }
+        if (room.state !== ConnectionState.Connected) {
+          throw new Error('Room is not connected');
+        }
+
+        const destinationIdentities = Array.from(room.remoteParticipants.values())
+          .map((participant) => participant.identity)
+          .filter(
+            (identity): identity is string =>
+              Boolean(identity) && identity !== room.localParticipant.identity,
+          );
+        if (destinationIdentities.length === 0) {
+          throw new Error('No remote participant is connected to receive uploads');
+        }
+
         await room.localParticipant.sendFile(file, {
           mimeType: file.type,
           topic: 'images',
+          destinationIdentities,
         });
+
+        const previewUrl = URL.createObjectURL(file);
+        localImageUrlsRef.current.push(previewUrl);
+
+        setLocalUploadedImageItems((previousItems) => [
+          ...previousItems.slice(-20),
+          {
+            id:
+              typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                ? crypto.randomUUID()
+                : `local-image-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            name: file.name,
+            topic: 'images',
+            mimeType: file.type,
+            fromIdentity: localParticipant.identity,
+            from: 'user',
+            url: previewUrl,
+            receivedAt: Date.now(),
+            size: file.size,
+          },
+        ]);
       } catch (err) {
         console.error('[session-view] image upload failed:', err);
       } finally {
         setUploadingFile(null);
       }
     },
-    [room, chatOpen],
+    [chatOpen, localParticipant.identity, room],
   );
 
   // Video URL handler
@@ -283,6 +331,8 @@ export function AgentSessionView_01({
       if (videoObjectUrlRef.current) {
         URL.revokeObjectURL(videoObjectUrlRef.current);
       }
+      localImageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      localImageUrlsRef.current = [];
     };
   }, []);
 
