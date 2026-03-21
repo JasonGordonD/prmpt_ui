@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, type MotionProps, motion } from 'motion/react';
 import { useAgent, useLocalParticipant, useRoomContext, useSessionContext, useSessionMessages } from '@livekit/components-react';
+import { type DataPacket_Kind, type RemoteParticipant, RoomEvent } from 'livekit-client';
 import { AgentChatTranscript } from '@/components/agents-ui/agent-chat-transcript';
 import {
   AgentControlBar,
@@ -18,6 +19,53 @@ import { useRealtimeMediaData } from '@/hooks/agents-ui/use-realtime-media-data'
 import { Shimmer } from '@/components/ai-elements/shimmer';
 import { cn } from '@/lib/utils';
 import { TileLayout } from './tile-view';
+
+function parseImageEgressPayload(rawPayload: Uint8Array): string | null {
+  let decoded = '';
+  try {
+    decoded = new TextDecoder().decode(rawPayload).trim();
+  } catch {
+    return null;
+  }
+
+  if (!decoded) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(decoded) as {
+      type?: unknown;
+      url?: unknown;
+      image_url?: unknown;
+      mimeType?: unknown;
+    };
+
+    const directUrl = typeof parsed.url === 'string' ? parsed.url.trim() : '';
+    const alternateUrl = typeof parsed.image_url === 'string' ? parsed.image_url.trim() : '';
+    const url = directUrl || alternateUrl;
+    if (!url) {
+      return null;
+    }
+
+    const payloadType = typeof parsed.type === 'string' ? parsed.type : '';
+    const mimeType = typeof parsed.mimeType === 'string' ? parsed.mimeType : '';
+    if (
+      payloadType === '' ||
+      payloadType === 'image_url' ||
+      payloadType === 'image' ||
+      mimeType.startsWith('image/')
+    ) {
+      return url;
+    }
+
+    return null;
+  } catch {
+    if (/^https?:\/\//i.test(decoded)) {
+      return decoded;
+    }
+    return null;
+  }
+}
 
 const MotionMessage = motion.create(Shimmer);
 
@@ -156,13 +204,13 @@ export function AgentSessionView_01({
   const room = useRoomContext();
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
-  const messagesRef = useRef(messages);
   const [chatOpen, setChatOpen] = useState(false);
   const { state: agentState } = useAgent();
   const { localParticipant } = useLocalParticipant();
 
   // Media data from byte streams
   const { incomingByteStreams } = useRealtimeMediaData({ chatOpen });
+  const [egressMediaItems, setEgressMediaItems] = useState<MediaItem[]>([]);
 
   // Uploading image state (optimistic thumbnail)
   const [uploadingFile, setUploadingFile] = useState<File | null>(null);
@@ -174,14 +222,16 @@ export function AgentSessionView_01({
 
   // Convert incoming byte streams to MediaItem[]
   const mediaItems = useMemo<MediaItem[]>(() => {
-    return incomingByteStreams
+    const byteStreamMediaItems = incomingByteStreams
       .filter((s) => s.mimeType.startsWith('image/') || s.mimeType.startsWith('video/'))
       .map((s) => ({
         ...s,
         from: s.fromIdentity === localParticipant.identity ? ('user' as const) : ('assistant' as const),
-        receivedAt: Date.now(),
+        receivedAt: s.receivedAt,
       }));
-  }, [incomingByteStreams, localParticipant.identity]);
+
+    return [...byteStreamMediaItems, ...egressMediaItems].sort((a, b) => a.receivedAt - b.receivedAt);
+  }, [incomingByteStreams, egressMediaItems, localParticipant.identity]);
 
   // Image upload handler
   const handleImageUpload = useCallback(
@@ -247,8 +297,70 @@ export function AgentSessionView_01({
   };
 
   useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+    if (!room) {
+      return;
+    }
+
+    const handleDataReceived = (
+      payload: Uint8Array,
+      participant?: RemoteParticipant,
+      _kind?: DataPacket_Kind,
+      topic?: string,
+    ) => {
+      if (topic !== 'image_egress') {
+        return;
+      }
+
+      const imageUrl = parseImageEgressPayload(payload);
+      if (!imageUrl) {
+        return;
+      }
+
+      const fromIdentity = participant?.identity ?? 'agent';
+      const streamId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `egress-image-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      setEgressMediaItems((previousItems) => {
+        const alreadyExists = previousItems.some(
+          (item) =>
+            item.url === imageUrl &&
+            item.mimeType.startsWith('image/') &&
+            item.from === (fromIdentity === localParticipant.identity ? 'user' : 'assistant'),
+        );
+        if (alreadyExists) {
+          return previousItems;
+        }
+
+        return [
+          ...previousItems,
+          {
+            id: streamId,
+            name: 'Agent image',
+            topic: 'image_egress',
+            mimeType: 'image/*',
+            fromIdentity,
+            from: fromIdentity === localParticipant.identity ? 'user' : 'assistant',
+            url: imageUrl,
+            receivedAt: Date.now(),
+          },
+        ];
+      });
+    };
+
+    const resetEgressMediaItems = () => {
+      setEgressMediaItems([]);
+    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    room.on(RoomEvent.Disconnected, resetEgressMediaItems);
+
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+      room.off(RoomEvent.Disconnected, resetEgressMediaItems);
+    };
+  }, [localParticipant.identity, room]);
 
   return (
     <section

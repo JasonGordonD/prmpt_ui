@@ -11,12 +11,19 @@ export type IncomingByteStream = {
   mimeType: string;
   fromIdentity: string;
   url: string;
+  receivedAt: number;
   size?: number;
 };
 
 type UseRealtimeMediaDataOptions = {
   chatOpen?: boolean;
 };
+
+function createIncomingStreamId() {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `incoming-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export function useRealtimeMediaData({ chatOpen = true }: UseRealtimeMediaDataOptions = {}) {
   const room = useRoomContext();
@@ -63,16 +70,19 @@ export function useRealtimeMediaData({ chatOpen = true }: UseRealtimeMediaDataOp
         const blob = new Blob([merged.buffer], { type: reader.info.mimeType || 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         objectUrlsRef.current.push(url);
+        const receivedAt = Date.now();
+        const streamId = reader.info.id?.trim() || createIncomingStreamId();
 
         setIncomingByteStreams((prev) => [
           ...prev.slice(-15),
           {
-            id: reader.info.id,
+            id: streamId,
             name: reader.info.name,
             topic: reader.info.topic,
             mimeType: reader.info.mimeType,
             fromIdentity: participantInfo.identity,
             url,
+            receivedAt,
             size: reader.info.size,
           },
         ]);
@@ -86,12 +96,14 @@ export function useRealtimeMediaData({ chatOpen = true }: UseRealtimeMediaDataOp
     room.registerByteStreamHandler('files', processByteStream);
     room.registerByteStreamHandler('uploads', processByteStream);
     room.registerByteStreamHandler('agent_images', processByteStream);
+    room.registerByteStreamHandler('agent-images', processByteStream);
 
     return () => {
       room.unregisterByteStreamHandler('images');
       room.unregisterByteStreamHandler('files');
       room.unregisterByteStreamHandler('uploads');
       room.unregisterByteStreamHandler('agent_images');
+      room.unregisterByteStreamHandler('agent-images');
     };
   }, [room]);
 

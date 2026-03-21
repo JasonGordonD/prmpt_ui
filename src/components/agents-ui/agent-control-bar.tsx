@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import { useChat, useSessionContext } from '@livekit/components-react';
+import { useSessionContext } from '@livekit/components-react';
 import { ConnectionState, Track } from 'livekit-client';
-import { Loader, MessageSquareTextIcon, Paperclip, SendHorizontal } from 'lucide-react';
+import { Loader, MessageSquareTextIcon, SendHorizontal } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { AgentDisconnectButton } from '@/components/agents-ui/agent-disconnect-button';
@@ -46,12 +46,6 @@ const LK_TOGGLE_VARIANT_2 = [
 ];
 
 const ACCEPTED_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain'];
-
-function createUploadId() {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `upload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 function getUploadTopicsForFile(file: File): string[] {
   if (file.type.startsWith('image/')) {
@@ -281,7 +275,6 @@ export function AgentControlBar({
   className,
   ...props
 }: AgentControlBarProps & ComponentProps<'div'>) {
-  const { send } = useChat();
   const session = useSessionContext();
   const publishPermissions = usePublishPermissions();
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -299,7 +292,11 @@ export function AgentControlBar({
   } = useInputControls({ onDeviceError, saveUserChoices });
 
   const handleSendMessage = async (message: string) => {
-    await send(message);
+    if (!session.room || session.room.state !== ConnectionState.Connected) {
+      throw new Error('Room is not connected');
+    }
+
+    await session.room.localParticipant.sendText(message, { topic: 'lk.chat' });
   };
 
   const visibleControls = {
@@ -330,10 +327,6 @@ export function AgentControlBar({
         (identity): identity is string =>
           Boolean(identity) && identity !== session.room.localParticipant.identity,
       );
-
-    const uploadId = createUploadId();
-    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
-    const timestamp = Date.now();
 
     setUploadStatus('uploading');
 
@@ -382,7 +375,7 @@ export function AgentControlBar({
     <div
       aria-label="Voice assistant controls"
       className={cn(
-        'bg-background border-input/50 dark:border-muted flex items-center gap-2 border p-2 drop-shadow-md/3',
+        'bg-background border-border/70 dark:border-muted flex items-center gap-2 border p-2 drop-shadow-md/3',
         variant === 'livekit' ? 'rounded-[31px]' : 'rounded-lg',
         className,
       )}
@@ -496,7 +489,7 @@ export function AgentControlBar({
       </div>
 
       {visibleControls.chat ? (
-        <div className="border-input/50 min-w-0 grow rounded-full border bg-accent/30 px-1">
+        <div className="border-border/70 min-w-0 grow rounded-full border bg-background/80 px-1">
           <AgentChatInput
             disabled={!isConnected}
             onSend={handleSendMessage}
