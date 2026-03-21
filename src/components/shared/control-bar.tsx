@@ -7,7 +7,7 @@ import {
   useChat,
   useSessionContext,
 } from '@livekit/components-react';
-import { Mic, MicOff, MessageSquare, Paperclip, Send, LogOut, X, Check, FileText } from 'lucide-react';
+import { Mic, MicOff, MessageSquare, Paperclip, Send, LogOut, X, Check, FileText, AlertCircle } from 'lucide-react';
 
 type ControlBarProps = {
   onLeave: () => void;
@@ -31,7 +31,7 @@ function getUploadTopic(file: File) {
 function FileUploadButton() {
   const session = useSessionContext();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const [fileName, setFileName] = useState('');
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,8 +57,11 @@ function FileUploadButton() {
       }, 3000);
     } catch (err) {
       console.error('File send failed:', err);
-      setStatus('idle');
-      setFileName('');
+      setStatus('failed');
+      setTimeout(() => {
+        setStatus('idle');
+        setFileName('');
+      }, 3000);
     }
 
     if (inputRef.current) inputRef.current.value = '';
@@ -78,14 +81,24 @@ function FileUploadButton() {
         className={`flex items-center justify-center w-11 h-11 rounded-lg btn-interactive border border-[var(--border)] ${
           status === 'sent'
             ? 'bg-green-600/20 text-green-400'
+            : status === 'failed'
+              ? 'bg-red-600/20 text-red-400'
             : 'bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--border)]'
         }`}
-        title={status === 'sent' ? `Sent: ${fileName}` : 'Upload file'}
+        title={
+          status === 'sent'
+            ? `Sent: ${fileName}`
+            : status === 'failed'
+              ? `Failed: ${fileName}`
+              : 'Upload file'
+        }
       >
         {status === 'sending' ? (
           <div className="w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin-slow" />
         ) : status === 'sent' ? (
           <Check className="w-4 h-4" />
+        ) : status === 'failed' ? (
+          <AlertCircle className="w-4 h-4" />
         ) : (
           <Paperclip className="w-4 h-4" />
         )}
@@ -96,6 +109,12 @@ function FileUploadButton() {
         <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-green-400 animate-fade-in flex items-center gap-1.5">
           <FileText className="w-3 h-3" />
           {fileName} sent
+        </div>
+      )}
+      {status === 'failed' && fileName && (
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs text-red-400 animate-fade-in flex items-center gap-1.5">
+          <FileText className="w-3 h-3" />
+          {fileName} failed
         </div>
       )}
     </div>
