@@ -78,7 +78,7 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
           <h1 className="font-display text-[48px] font-[600] leading-tight text-[var(--noir-text)]">
             {agentConfig.displayName}
           </h1>
-          <p className="mt-3 font-mono text-[12px] uppercase tracking-[0.2em] text-[var(--noir-text-muted)]">
+          <p className="mt-3 text-[13px] uppercase tracking-[0.08em] text-[var(--noir-text-muted)] font-medium">
             {agentConfig.description}
           </p>
           <div className="my-6 w-20 border-t border-[var(--noir-accent)]" />
@@ -97,7 +97,7 @@ export function AgentLifecycleView({ agentConfig, children }: AgentLifecycleView
                 setStarting(false);
               }
             }}
-            className="preconnect-start-btn rounded-[2px] px-8 py-3 font-mono text-[13px] uppercase tracking-[0.2em] transition-colors disabled:opacity-60"
+            className="preconnect-start-btn rounded-[2px] px-8 py-3 text-[13px] font-medium uppercase tracking-[0.08em] transition-colors disabled:opacity-60"
           >
             {starting ? 'Starting...' : 'Start Session'}
           </button>

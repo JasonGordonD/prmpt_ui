@@ -79,7 +79,7 @@ export function AgentSessionView({
       }}
       className={cn(
         'session-shell h-screen',
-        controlsVariant === 'livekit' && '[&_button]:font-mono',
+        controlsVariant === 'livekit' && '[&_button]:font-medium',
         className,
       )}
     />

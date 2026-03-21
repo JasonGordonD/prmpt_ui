@@ -45,7 +45,7 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
   return (
     <div className={`status-bar grid h-10 min-h-10 grid-cols-[1fr_auto_1fr] items-center px-4 ${className}`}>
       <div className="min-w-0 overflow-hidden">
-        <div className="truncate font-mono text-[10px] uppercase tracking-[0.15em]">
+        <div className="truncate text-[11px] uppercase tracking-[0.08em]">
           <span className="text-[var(--noir-text-muted)]">{agentConfig.displayName}</span>
           <span className="mx-2 text-[var(--noir-accent)]">·</span>
           <span className="text-[var(--noir-text-dim)]">{currentNode.toLowerCase()}</span>
@@ -56,7 +56,7 @@ export function StatusBar({ agentConfig, className = '' }: StatusBarProps) {
         <StateIndicator state={agent.state} />
       </div>
 
-      <div className="flex justify-end font-mono text-[12px] uppercase tracking-[0.08em] text-[var(--noir-text-muted)] tabular-nums">
+      <div className="flex justify-end text-[13px] uppercase tracking-[0.08em] text-[var(--noir-text-muted)] tabular-nums font-medium">
         {timer}
       </div>
     </div>

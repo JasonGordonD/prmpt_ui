@@ -46,7 +46,7 @@ export default function LovebirdsPage() {
         <div className="space-y-3">
           <Heart className="w-8 h-8 text-[var(--noir-accent-bright)] mx-auto" />
           <h1 className="text-5xl font-display font-semibold text-[var(--noir-text)]">Lovebirds</h1>
-          <p className="text-[var(--noir-text-muted)] text-xs uppercase tracking-[0.16em] font-mono">
+          <p className="text-[var(--noir-text-muted)] text-xs uppercase tracking-[0.08em] font-medium">
             AI couples mediation with Raven Voss
           </p>
         </div>
@@ -60,7 +60,7 @@ export default function LovebirdsPage() {
         <button
           onClick={handleStart}
           disabled={connecting}
-          className="w-full py-3 rounded-lg border border-[var(--noir-accent)] bg-[rgba(7,7,10,0.78)] text-[var(--noir-accent-bright)] font-mono text-xs uppercase tracking-[0.16em] btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-[var(--noir-accent-dim)]"
+          className="w-full py-3 rounded-lg border border-[var(--noir-accent)] bg-[rgba(7,7,10,0.78)] text-[var(--noir-accent-bright)] text-xs font-medium uppercase tracking-[0.08em] btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-[var(--noir-accent-dim)]"
         >
           {connecting ? (
             <>

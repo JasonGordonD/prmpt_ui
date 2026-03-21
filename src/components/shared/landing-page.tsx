@@ -65,7 +65,7 @@ export function LandingPage() {
       <div className="w-full max-w-[400px] space-y-8">
         <div className="text-center space-y-3">
           <h1 className="text-5xl font-semibold tracking-tight text-[var(--noir-text)] font-display">PRMPT</h1>
-          <p className="text-[var(--noir-text-muted)] text-xs uppercase tracking-[0.18em] font-mono">
+          <p className="text-[var(--noir-text-muted)] text-xs uppercase tracking-[0.12em] font-medium">
             Voice AI Agent Platform
           </p>
         </div>
@@ -146,7 +146,7 @@ export function LandingPage() {
                 <button
                   type="submit"
                   disabled={loading || !password}
-                  className="w-full py-3 rounded-lg font-mono text-xs uppercase tracking-[0.16em] border border-[var(--noir-accent)] text-[var(--noir-accent-bright)] bg-transparent hover:bg-[var(--noir-accent-dim)] btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-lg text-xs font-medium uppercase tracking-[0.12em] border border-[var(--noir-accent)] text-[var(--noir-accent-bright)] bg-transparent hover:bg-[var(--noir-accent-dim)] btn-interactive min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -162,7 +162,7 @@ export function LandingPage() {
           )}
         </div>
 
-        <p className="text-center text-[var(--noir-text-dim)] text-xs font-mono uppercase tracking-[0.12em]">
+        <p className="text-center text-[var(--noir-text-dim)] text-xs uppercase tracking-[0.08em]">
           Powered by PRMPT
         </p>
       </div>

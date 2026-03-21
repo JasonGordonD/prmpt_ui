@@ -81,10 +81,10 @@ function DefaultMessageRenderer({ message, agentName }: MessageRendererProps) {
       <div className="group flex justify-end">
         <div className="max-w-[75%] space-y-1">
           <div className="flex items-center justify-end gap-2">
-            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
+            <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
               {speaker}
             </span>
-            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
+            <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
               {time}
             </span>
           </div>
@@ -101,12 +101,12 @@ function DefaultMessageRenderer({ message, agentName }: MessageRendererProps) {
       <div className="max-w-[80%] space-y-1">
         <div className="flex items-center gap-2">
           <span className="agent-name-label">{speaker}</span>
-          <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
+          <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--noir-text-dim)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 tabular-nums">
             {time}
           </span>
         </div>
         <div className="agent-message">
-          <div className="max-w-none text-[var(--noir-text)] [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-[700] [&_h1]:font-display [&_h1]:text-[1.7rem] [&_h1]:leading-tight [&_h1]:font-[600] [&_h2]:font-display [&_h2]:text-[1.35rem] [&_h2]:font-[600] [&_h3]:font-display [&_h3]:text-[1.15rem] [&_h3]:font-[600] [&_code]:font-mono [&_code]:bg-[var(--noir-bg-elevated)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_a]:text-[var(--noir-accent-bright)]">
+          <div className="max-w-none text-[var(--noir-text)] [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-[500] [&_h1]:font-display [&_h1]:text-[32px] [&_h1]:leading-tight [&_h1]:font-[600] [&_h2]:font-display [&_h2]:text-[22px] [&_h2]:font-[600] [&_h3]:font-display [&_h3]:text-[16px] [&_h3]:font-[500] [&_code]:font-mono [&_code]:bg-[var(--noir-bg-elevated)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_a]:text-[var(--noir-accent-bright)]">
             <MarkdownWithInlineMedia markdown={text} />
           </div>
         </div>
@@ -245,7 +245,7 @@ export function BaseTranscript({
           <div className="mx-auto w-full max-w-5xl space-y-3 px-5 py-4">
             {messages.length === 0 && (
               <div className="flex items-center justify-center h-full py-16">
-                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--noir-text-dim)] animate-pulse-subtle">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--noir-text-dim)] animate-pulse-subtle">
                   Waiting for conversation to begin...
                 </p>
               </div>
