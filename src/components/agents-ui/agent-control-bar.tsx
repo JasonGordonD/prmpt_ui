@@ -72,8 +72,7 @@ function createUploadId() {
 
 function getUploadTopicsForFile(file: File): string[] {
   if (file.type.startsWith('image/')) {
-    // Send image uploads on all known byte-stream topics used across agent stacks.
-    return ['images', 'uploads', 'files'];
+    return ['images'];
   }
   return ['uploads', 'files'];
 }

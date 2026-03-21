@@ -187,6 +187,7 @@ export function AgentSessionView_01({
   const session = useSessionContext();
   const { messages } = useSessionMessages(session);
   const messagesRef = useRef(messages);
+  const generatedImageObjectUrlsRef = useRef<string[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [uploadedItems, setUploadedItems] = useState<UploadTimelineItem[]>([]);
   const [receivedImages, setReceivedImages] = useState<string[]>([]);
@@ -250,6 +251,60 @@ export function AgentSessionView_01({
     const room = session.room;
     if (!room) return;
 
+    const appendGeneratedImage = (url: string) => {
+      const latestAgentMessage = [...messagesRef.current]
+        .reverse()
+        .find((message) => !message.from?.isLocal);
+
+      setReceivedImages((prev) => [...prev, url]);
+      setGeneratedImages((prev) => [
+        ...prev,
+        {
+          id:
+            typeof crypto !== 'undefined' && 'randomUUID' in crypto
+              ? crypto.randomUUID()
+              : `generated-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          url,
+          timestamp: Date.now(),
+          triggerMessageId: latestAgentMessage?.id ?? null,
+        },
+      ]);
+    };
+
+    const revokeGeneratedImageObjectUrls = () => {
+      for (const objectUrl of generatedImageObjectUrlsRef.current) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      generatedImageObjectUrlsRef.current = [];
+    };
+
+    const processImageByteStream = async (
+      reader: {
+        info: { id: string; name: string; topic: string; mimeType?: string; size?: number };
+        readAll: () => Promise<Uint8Array[]>;
+      },
+    ) => {
+      try {
+        const chunks = await reader.readAll();
+        const totalSize = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+        const merged = new Uint8Array(totalSize);
+        let offset = 0;
+        for (const chunk of chunks) {
+          merged.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
+
+        const blob = new Blob([merged], {
+          type: reader.info.mimeType || 'application/octet-stream',
+        });
+        const objectUrl = URL.createObjectURL(blob);
+        generatedImageObjectUrlsRef.current.push(objectUrl);
+        appendGeneratedImage(objectUrl);
+      } catch (error) {
+        console.warn('Ignoring malformed image byte stream payload', error);
+      }
+    };
+
     const handleDataReceived = (
       payload: Uint8Array,
       _participant?: RemoteParticipant,
@@ -272,39 +327,29 @@ export function AgentSessionView_01({
           return;
         }
 
-        const latestAgentMessage = [...messagesRef.current]
-          .reverse()
-          .find((message) => !message.from?.isLocal);
-
-        setReceivedImages((prev) => [...prev, url]);
-        setGeneratedImages((prev) => [
-          ...prev,
-          {
-            id:
-              typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                ? crypto.randomUUID()
-                : `generated-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            url,
-            timestamp: Date.now(),
-            triggerMessageId: latestAgentMessage?.id ?? null,
-          },
-        ]);
+        appendGeneratedImage(url);
       } catch (error) {
         console.warn('Ignoring malformed image_egress payload', error);
       }
     };
 
     const handleDisconnected = () => {
+      revokeGeneratedImageObjectUrls();
       setReceivedImages([]);
       setGeneratedImages([]);
     };
 
+    room.registerByteStreamHandler('agent-images', processImageByteStream);
+    room.registerByteStreamHandler('images', processImageByteStream);
     room.on(RoomEvent.DataReceived, handleDataReceived);
     room.on(RoomEvent.Disconnected, handleDisconnected);
 
     return () => {
+      room.unregisterByteStreamHandler('agent-images');
+      room.unregisterByteStreamHandler('images');
       room.off(RoomEvent.DataReceived, handleDataReceived);
       room.off(RoomEvent.Disconnected, handleDisconnected);
+      revokeGeneratedImageObjectUrls();
     };
   }, [session.room]);
 
