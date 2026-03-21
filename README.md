@@ -88,6 +88,12 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
 - Direct `.mp4` and `.webm` links in agent chat continue to render as inline video players.
 - Session routes now use the Aura audio visualizer (`audioVisualizerType="aura"`) in place of the bar visualizer without layout repositioning.
 
+## Frontend upload routing update (WO-UI-003)
+
+- Frontend image uploads are routed to LiveKit byte-stream topic `images` so backend upload handlers receive binary image chunks.
+- Non-image uploads continue to use non-image topics (`files` / `uploads`) depending on component flow.
+- Upload UI "sent"/"failed" states are tied to `sendFile` completion outcomes (byte-stream send success/failure), not text metadata acknowledgements.
+
 ## Deployment + rollback references (2026-03-16 overhaul)
 
 ### Production deployment target
