@@ -31,6 +31,38 @@ const KNOWN_IMAGE_HOST_SUFFIXES = [
   'live.staticflickr.com',
 ];
 
+function getFilenameFromUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const pathSegment = parsed.pathname.split('/').filter(Boolean).at(-1);
+    return pathSegment || 'download';
+  } catch {
+    return 'download';
+  }
+}
+
+function triggerNativeDownloadOrNewTab(url: string) {
+  if (!url || typeof document === 'undefined' || typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = getFilenameFromUrl(url);
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    return;
+  } catch {
+    // Fallback below.
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 function tryParseAbsoluteHttpUrl(raw: string): URL | null {
   try {
     const parsed = new URL(raw);
@@ -170,9 +202,14 @@ function InlineMediaContent({
           />
           <a
             href={media.sourceUrl}
-            download
+            onClick={(event) => {
+              event.preventDefault();
+              triggerNativeDownloadOrNewTab(media.sourceUrl!);
+            }}
             className="media-download-btn flex items-center justify-center"
             title="Download image"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             <Download className="h-4 w-4 text-[var(--noir-text-muted)]" />
           </a>
@@ -193,8 +230,13 @@ function InlineMediaContent({
         />
         <a
           href={media.sourceUrl}
-          download
+          onClick={(event) => {
+            event.preventDefault();
+            triggerNativeDownloadOrNewTab(media.sourceUrl!);
+          }}
           className="media-video-download-link"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           Download video
         </a>
