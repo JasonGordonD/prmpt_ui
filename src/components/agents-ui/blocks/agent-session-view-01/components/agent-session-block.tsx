@@ -257,22 +257,63 @@ export function AgentSessionView_01({
           throw new Error('Room is not connected');
         }
 
-        const destinationIdentities = Array.from(room.remoteParticipants.values())
-          .map((participant) => participant.identity)
-          .filter(
-            (identity): identity is string =>
-              Boolean(identity) && identity !== room.localParticipant.identity,
-          );
-        if (destinationIdentities.length === 0) {
-          throw new Error('No remote participant is connected to receive uploads');
+        // ── Primary path: Upload to ImgBB, send URL as text ──
+        let imgbbSuccess = false;
+        try {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              const base64Data = result.split(',')[1];
+              if (base64Data) {
+                resolve(base64Data);
+              } else {
+                reject(new Error('Failed to read file as base64'));
+              }
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          });
+
+          const uploadRes = await fetch('/api/imgbb/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64 }),
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error('ImgBB upload failed');
+          }
+
+          const { url: imageUrl } = await uploadRes.json();
+
+          // Send URL as text message via session messages (appears in transcript)
+          await sendSessionMessage(imageUrl);
+          imgbbSuccess = true;
+        } catch (imgbbErr) {
+          console.warn('[session-view] ImgBB upload failed, falling back to byte stream:', imgbbErr);
         }
 
-        await room.localParticipant.sendFile(file, {
-          mimeType: file.type,
-          topic: 'images',
-          destinationIdentities,
-        });
+        // ── Fallback: send via byte stream if ImgBB failed ──
+        if (!imgbbSuccess) {
+          const destinationIdentities = Array.from(room.remoteParticipants.values())
+            .map((participant) => participant.identity)
+            .filter(
+              (identity): identity is string =>
+                Boolean(identity) && identity !== room.localParticipant.identity,
+            );
+          if (destinationIdentities.length === 0) {
+            throw new Error('No remote participant is connected to receive uploads');
+          }
 
+          await room.localParticipant.sendFile(file, {
+            mimeType: file.type,
+            topic: 'images',
+            destinationIdentities,
+          });
+        }
+
+        // ── Local preview (always) ──
         const previewUrl = URL.createObjectURL(file);
         localImageUrlsRef.current.push(previewUrl);
 
@@ -299,7 +340,7 @@ export function AgentSessionView_01({
         setUploadingFile(null);
       }
     },
-    [chatOpen, localParticipant.identity, room],
+    [chatOpen, localParticipant.identity, room, sendSessionMessage],
   );
 
   // Video URL handler
