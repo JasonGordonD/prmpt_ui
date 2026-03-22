@@ -142,6 +142,10 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
   - `/pack/session` → `/pack`
 - Token generation and auth flow are unchanged: start button still calls `/api/token` with existing agent identifiers.
 
+## Image upload support on all landing pages (WO-UI-005)
+
+- Added `supportsImageUpload` prop to `AgentSessionView` on all 5 agent landing pages (JRVS, Minka, Coaching, The Pack, Lovebirds).
+
 ## Image upload delivery hardening after session consolidation (WO-CURSOR-IMAGEUPLOAD-001)
 
 - Upload send path now verifies the room is actively connected before calling `sendFile`.

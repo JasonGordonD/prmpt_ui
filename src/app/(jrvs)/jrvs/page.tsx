@@ -23,6 +23,7 @@ function JrvsActiveSession({ onReturnToIdle }: { onReturnToIdle: () => void }) {
       isPreConnectBufferEnabled
       supportsScreenShare
       supportsChatInput
+      supportsImageUpload
       supportsVideoInput={false}
       audioVisualizerType="aura"
       controlsVariant="outline"
