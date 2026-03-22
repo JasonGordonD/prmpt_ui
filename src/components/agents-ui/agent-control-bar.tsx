@@ -434,6 +434,8 @@ export interface AgentControlBarProps extends UseInputControlsProps {
   onVideoUrl?: (url: string) => void;
   /** The callback for when the user uploads a video file. */
   onVideoFile?: (file: File) => void;
+  /** Optional external send handler. When provided, replaces the built-in handleSendMessage. */
+  onSendMessage?: (message: string) => Promise<void> | void;
 }
 
 /**
@@ -472,6 +474,7 @@ export function AgentControlBar({
   onImageUpload,
   onVideoUrl,
   onVideoFile,
+  onSendMessage,
   className,
   ...props
 }: AgentControlBarProps & ComponentProps<'div'>) {
@@ -721,7 +724,7 @@ export function AgentControlBar({
         <div className="border-border/70 min-w-0 grow rounded-full border bg-background/80 px-1">
           <AgentChatInput
             disabled={!isConnected}
-            onSend={handleSendMessage}
+            onSend={onSendMessage ?? handleSendMessage}
             onImageUpload={onImageUpload}
             className={cn(variant === 'livekit' && '[&_button]:rounded-full')}
           />

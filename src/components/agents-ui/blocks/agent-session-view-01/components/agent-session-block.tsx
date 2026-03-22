@@ -206,7 +206,7 @@ export function AgentSessionView_01({
 }: React.ComponentProps<'section'> & AgentSessionView_01Props) {
   const room = useRoomContext();
   const session = useSessionContext();
-  const { messages } = useSessionMessages(session);
+  const { messages, send: sendSessionMessage } = useSessionMessages(session);
   const [chatOpen, setChatOpen] = useState(false);
   const { state: agentState } = useAgent();
   const { localParticipant } = useLocalParticipant();
@@ -335,6 +335,13 @@ export function AgentSessionView_01({
       localImageUrlsRef.current = [];
     };
   }, []);
+
+  const handleSendMessage = useCallback(
+    async (message: string) => {
+      await sendSessionMessage(message);
+    },
+    [sendSessionMessage],
+  );
 
   const controls: AgentControlBarControls = {
     leave: true,
@@ -518,6 +525,7 @@ export function AgentSessionView_01({
               isConnected={session.isConnected}
               onDisconnect={onDisconnect ?? session.end}
               onIsChatOpenChange={setChatOpen}
+              onSendMessage={handleSendMessage}
               onImageUpload={supportsImageUpload ? handleImageUpload : undefined}
               onVideoUrl={supportsVideoPlayer ? handleVideoUrl : undefined}
               onVideoFile={supportsVideoPlayer ? handleVideoFile : undefined}
