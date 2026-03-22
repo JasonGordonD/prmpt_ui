@@ -145,6 +145,27 @@ export const AGENTS: AgentConfig[] = [
     },
     nodeMap: {},
   },
+  {
+    id: 'tijoux',
+    displayName: 'Dr. Tijoux',
+    description: 'Clinical excavation with Dr. Annette Tijoux',
+    agentName: 'dr-tijoux',
+    passwordEnvKey: 'AGENT_PASSWORD_TIJOUX',
+    livekitEnvPrefix: 'TIJOUX',
+    routeGroup: 'tijoux',
+    theme: {
+      background: '#0f0f17',
+      surface: '#1a1a28',
+      primary: '#6b5b8d',
+      accent: '#8b7aac',
+      text: '#e8e0f0',
+      textMuted: '#8878a0',
+      border: '#2d2640',
+      auraColor: '#6b5b8d',
+      auraColorShift: 0.18,
+    },
+    nodeMap: {},
+  },
 ];
 
 export function getAgentById(id: string): AgentConfig | undefined {

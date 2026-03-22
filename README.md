@@ -1,6 +1,6 @@
 # PRMPT UI
 
-Multi-agent Next.js frontend for PRMPT voice agents (Minka, Coaching, Lovebirds, JRVS, The Pack).
+Multi-agent Next.js frontend for PRMPT voice agents (Minka, Coaching, Lovebirds, JRVS, The Pack, Dr. Tijoux).
 
 ## Getting started
 
@@ -44,6 +44,12 @@ Each agent requires three LiveKit credentials and one access password.
 - `LIVEKIT_API_SECRET_PACK` *(preferred)* or `LIVEKIT_API_SECRET_THEPACK` *(legacy alias)*
 - `LIVEKIT_URL_PACK` *(preferred)* or `LIVEKIT_URL_THEPACK` *(legacy alias)*
 - `AGENT_PASSWORD_PACK` *(preferred)* or `AGENT_PASSWORD_THEPACK` *(legacy alias)*
+
+### Dr. Tijoux
+- `LIVEKIT_API_KEY_TIJOUX`
+- `LIVEKIT_API_SECRET_TIJOUX`
+- `LIVEKIT_URL_TIJOUX`
+- `AGENT_PASSWORD_TIJOUX`
 
 ## LiveKit stream export/import API
 
@@ -133,6 +139,7 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
   - `/minka`
   - `/lovebirds`
   - `/pack`
+  - `/tijoux`
 - The extra `/agent/session?token=...` transition is removed from the primary UX.
 - Legacy `/agent/session` routes are retained only as redirects back to their agent root pages:
   - `/jrvs/session` → `/jrvs`
@@ -140,6 +147,7 @@ All routes require a validated agent auth cookie (`prmpt_access_<agentId>`) and 
   - `/minka/session` → `/minka`
   - `/lovebirds/session` → `/lovebirds`
   - `/pack/session` → `/pack`
+  - `/tijoux/session` → `/tijoux`
 - Token generation and auth flow are unchanged: start button still calls `/api/token` with existing agent identifiers.
 
 ## Image upload support on all landing pages (WO-UI-005)

@@ -1,6 +1,6 @@
 import 'server-only';
 
-type AgentId = 'minka' | 'coaching' | 'lovebirds' | 'jrvs' | 'pack';
+type AgentId = 'minka' | 'coaching' | 'lovebirds' | 'jrvs' | 'pack' | 'tijoux';
 
 type EnvResolution = {
   value?: string;
@@ -53,6 +53,11 @@ const ENV_VALUES: Record<string, string | undefined> = {
   AGENT_PASSWORD_PACK: process.env.AGENT_PASSWORD_PACK,
   AGENT_PASSWORD_THEPACK: process.env.AGENT_PASSWORD_THEPACK,
   AGENT_PASSWORD: process.env.AGENT_PASSWORD,
+
+  LIVEKIT_API_KEY_TIJOUX: process.env.LIVEKIT_API_KEY_TIJOUX,
+  LIVEKIT_API_SECRET_TIJOUX: process.env.LIVEKIT_API_SECRET_TIJOUX,
+  LIVEKIT_URL_TIJOUX: process.env.LIVEKIT_URL_TIJOUX,
+  AGENT_PASSWORD_TIJOUX: process.env.AGENT_PASSWORD_TIJOUX,
 };
 
 export const LIVEKIT_ENV_KEYS_BY_AGENT: Record<AgentId, LiveKitEnvKeys> = {
@@ -81,6 +86,11 @@ export const LIVEKIT_ENV_KEYS_BY_AGENT: Record<AgentId, LiveKitEnvKeys> = {
     apiSecret: ['LIVEKIT_API_SECRET_PACK', 'LIVEKIT_API_SECRET_THEPACK', 'LIVEKIT_API_SECRET'],
     url: ['LIVEKIT_URL_PACK', 'LIVEKIT_URL_THEPACK', 'LIVEKIT_URL'],
   },
+  tijoux: {
+    apiKey: ['LIVEKIT_API_KEY_TIJOUX', 'LIVEKIT_API_KEY'],
+    apiSecret: ['LIVEKIT_API_SECRET_TIJOUX', 'LIVEKIT_API_SECRET'],
+    url: ['LIVEKIT_URL_TIJOUX', 'LIVEKIT_URL'],
+  },
 };
 
 export const PASSWORD_ENV_KEYS_BY_AGENT: Record<AgentId, string[]> = {
@@ -89,6 +99,7 @@ export const PASSWORD_ENV_KEYS_BY_AGENT: Record<AgentId, string[]> = {
   lovebirds: ['AGENT_PASSWORD_LOVEBIRDS', 'AGENT_PASSWORD'],
   jrvs: ['AGENT_PASSWORD_JRVS', 'AGENT_PASSWORD'],
   pack: ['AGENT_PASSWORD_PACK', 'AGENT_PASSWORD_THEPACK', 'AGENT_PASSWORD'],
+  tijoux: ['AGENT_PASSWORD_TIJOUX', 'AGENT_PASSWORD'],
 };
 
 const AGENT_ID_ALIASES: Record<string, AgentId> = {
@@ -100,6 +111,9 @@ const AGENT_ID_ALIASES: Record<string, AgentId> = {
   thepack: 'pack',
   'the-pack': 'pack',
   'the_pack': 'pack',
+  tijoux: 'tijoux',
+  'dr-tijoux': 'tijoux',
+  'dr_tijoux': 'tijoux',
 };
 
 function resolveEnvValue(candidateKeys: string[]): EnvResolution {
